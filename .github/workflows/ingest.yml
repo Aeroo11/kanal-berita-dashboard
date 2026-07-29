@@ -27,23 +27,26 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v5
 
-      # The landing zone lives on its own orphan branch so the code history
-      # stays readable. Cloning it into ./data means the ingest cycle sees the
-      # articles and feed state from every previous run, which is what makes
-      # deduplication and conditional requests work across runs.
-      - name: Check out the data branch
+      # The landing zone lives on its own orphan branch, so the code history
+      # stays readable while the data still accumulates in the same repository.
+      # Mounting it at ./data means the ingest cycle sees every previous run's
+      # articles and feed state — which is what makes deduplication and
+      # conditional requests work across runs rather than only within one.
+      - name: Mount the data branch at ./data
         run: |
+          set -euo pipefail
           git config user.name "kanal-bot"
           git config user.email "kanal-bot@users.noreply.github.com"
+
           if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
-            git fetch origin data --depth=1
+            git fetch --depth=1 origin data
             git worktree add data origin/data
+            echo "mounted existing data branch"
           else
-            echo "data branch does not exist yet; creating it"
-            git worktree add --detach data
-            cd data
-            git checkout --orphan data
-            git rm -rf . >/dev/null 2>&1 || true
+            # First ever run. --orphan gives a worktree on a branch with no
+            # history, so the data branch never carries a copy of the code.
+            git worktree add --orphan -b data data
+            echo "created the data branch"
           fi
 
       - name: Set up Python
@@ -79,6 +82,7 @@ jobs:
         if: always()
         working-directory: data
         run: |
+          set -euo pipefail
           git add -A
           if git diff --cached --quiet; then
             echo "nothing new this cycle"
@@ -86,5 +90,4 @@ jobs:
           fi
           rows=$(find raw -name '*.jsonl' -exec cat {} + 2>/dev/null | wc -l || echo 0)
           git commit -m "ingest $(date -u '+%Y-%m-%d %H:%M') UTC — ${rows} rows total"
-          # Retry once: another cycle can land between our fetch and our push.
-          git push origin HEAD:data || (git pull --rebase origin data && git push origin HEAD:data)
+          git push origin HEAD:data
