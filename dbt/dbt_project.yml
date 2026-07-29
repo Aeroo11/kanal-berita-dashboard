@@ -1,0 +1,35 @@
+name: kanal
+version: "1.0.0"
+config-version: 2
+
+profile: kanal
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  kanal:
+    # Staging is thin and cheap to rebuild, so views keep the warehouse small
+    # and guarantee they never serve a stale copy of `raw_articles`.
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    # Marts are what everything downstream reads — training, the API, the
+    # dashboard. Materialising them means one dedup pass, not one per consumer.
+    marts:
+      +materialized: table
+
+seeds:
+  kanal:
+    taxonomy_map:
+      +column_types:
+        source: varchar
+        channel: varchar
+        kanal: varchar
+        notes: varchar

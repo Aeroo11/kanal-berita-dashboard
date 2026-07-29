@@ -1,0 +1,24 @@
+# Checked in deliberately. There is no secret here — the warehouse is a local
+# DuckDB file — and a profile that lives only on one laptop is a profile that
+# makes the project unrunnable for anyone else, including CI.
+kanal:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # Relative to this file, so `dbt build` works from the dbt/ directory on
+      # any machine without an absolute path baked in.
+      path: "../data/kanal.duckdb"
+      threads: 2
+      # Same reasoning as src/kanal/warehouse/duck.py: every DuckDB default is
+      # derived from the host, and the host is not always the one you tested on.
+      settings:
+        temp_directory: "../data/.duckdb-tmp"
+        memory_limit: "1GB"
+        autoinstall_known_extensions: false
+        autoload_known_extensions: false
+
+# One target on purpose. A second "ci" target pointing at a different file
+# would only be a way for CI to build against a database the loader never
+# wrote — which is the kind of divergence that lets a green build mean nothing.
+# CI runs the same target against a fixture-loaded warehouse.

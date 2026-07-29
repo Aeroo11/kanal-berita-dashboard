@@ -1,0 +1,26 @@
+source,channel,kanal,confidence,notes
+antara,politik,politik,high,Direct match. ANTARA separates politik from hukum cleanly.
+antara,hukum,hukum-kriminal,high,Direct match.
+antara,ekonomi,ekonomi,high,Direct match.
+antara,metro,hukum-kriminal,low,"Judgement call. ANTARA 'metro' is Jakarta city news, dominated by crime and civic incidents. Mapped here rather than inventing a 'daerah' class. Revisit if the confusion matrix shows it bleeding into politik."
+antara,sepakbola,olahraga,high,Football is a subset of sport. ANTARA runs both feeds and they overlap heavily.
+antara,olahraga,olahraga,high,Direct match.
+antara,tekno,teknologi,high,Direct match.
+antara,hiburan,hiburan,high,Direct match.
+antara,dunia,internasional,high,"ANTARA says 'dunia' where CNN says 'internasional'. Same class, different house style."
+antara,humaniora,gaya-hidup-kesehatan,low,"Weakest mapping in the registry. 'humaniora' spans health, education and social affairs. The most likely single source of label noise; flagged for the noise-ceiling study."
+antara,lifestyle,gaya-hidup-kesehatan,high,Direct match.
+cnn,nasional,politik,medium,"Judgement call. CNN 'nasional' is predominantly domestic politics and government, but some crime stories land here. A known contributor to politik/hukum-kriminal confusion."
+cnn,ekonomi,ekonomi,high,Direct match.
+cnn,olahraga,olahraga,high,Direct match.
+cnn,teknologi,teknologi,high,Direct match.
+cnn,hiburan,hiburan,high,Direct match.
+cnn,internasional,internasional,high,Direct match.
+cnn,gaya-hidup,gaya-hidup-kesehatan,high,Direct match.
+liputan6,bisnis,ekonomi,high,"Liputan6 says 'bisnis' where the others say 'ekonomi'. Same class."
+liputan6,bola,olahraga,high,Football is a subset of sport; Liputan6 has no general sport feed.
+liputan6,tekno,teknologi,high,Direct match.
+liputan6,showbiz,hiburan,high,Direct match.
+liputan6,global,internasional,high,Direct match.
+liputan6,health,gaya-hidup-kesehatan,medium,"Health is folded into the lifestyle class rather than given its own. Eight classes was the budget; a separate 'kesehatan' would be thin and would confuse with lifestyle constantly."
+liputan6,lifestyle,gaya-hidup-kesehatan,high,Direct match.

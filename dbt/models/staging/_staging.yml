@@ -1,0 +1,101 @@
+version: 2
+
+sources:
+  - name: kanal
+    description: Tables written by the Python loader. Nothing in dbt writes here.
+    schema: main
+    tables:
+      - name: raw_articles
+        description: >
+          One row per article, exactly as ingestion wrote it. Faithful rather
+          than clean: the publisher's own fields survive in `extra` alongside a
+          `schema_version`, so a feed changing shape is recoverable instead of
+          being a day of data silently discarded.
+        loaded_at_field: fetched_at
+        freshness:
+          # Ingestion runs hourly. Two hours means one cycle was missed, which
+          # is data that cannot be recovered — worth a warning. Six hours means
+          # something is properly broken.
+          warn_after: { count: 2, period: hour }
+          error_after: { count: 6, period: hour }
+        columns:
+          - name: article_key
+            description: sha256 of the canonical URL. The natural key.
+            tests: [unique, not_null]
+          - name: title
+            tests: [not_null]
+          - name: kanal
+            tests: [not_null]
+          - name: source
+            tests: [not_null]
+
+      - name: _load_log
+        description: Which landing-zone files the loader has consumed.
+        columns:
+          - name: file_path
+            tests: [unique, not_null]
+
+models:
+  - name: stg_articles
+    description: >
+      Typed and derived view over raw_articles. Casts, derives, and marks —
+      never filters. A row excluded here would be excluded invisibly.
+    columns:
+      - name: article_key
+        tests: [unique, not_null]
+
+      - name: title
+        tests:
+          - not_null
+          # NOT NULL does not catch '' or '   '.
+          - not_empty_string
+
+      - name: kanal
+        description: The canonical label, from the feed the article arrived on.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - politik
+                  - ekonomi
+                  - olahraga
+                  - teknologi
+                  - hiburan
+                  - internasional
+                  - hukum-kriminal
+                  - gaya-hidup-kesehatan
+
+      - name: source
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [antara, cnn, liputan6]
+
+      - name: title_words
+        description: >
+          Headline length in words. The task is headline-only, so this is the
+          difficulty knob: measured at ~9.9 words on the first real cycle.
+        tests:
+          - accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 60
+
+      - name: schema_version
+        tests: [not_null]
+
+      - name: url_leaks_label
+        description: >
+          True when the article's own URL contains its label. Not a defect —
+          a measured property of the source, and the basis of the leakage
+          experiment. Measured: CNN 85.7%, Liputan6 1.1%, ANTARA 2.3%.
+        tests: [not_null]
+
+      - name: is_evergreen
+        description: >
+          Older than 30 days at fetch time. ANTARA mixes explainers into its
+          news feeds (64% of its items); CNN has none. The temporal split has
+          to know this or the test set ends up dominated by CNN.
+        tests: [not_null]

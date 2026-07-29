@@ -48,3 +48,32 @@ jobs:
       # Proves the CLI is wired up on a clean machine, without polling anyone.
       - name: Smoke-test the CLI
         run: uv run kanal status
+
+      # The whole chain, end to end, on synthetic data: fixture → landing zone
+      # → DuckDB → dbt models → contracts. CI never touches a publisher, but the
+      # fixture reproduces the properties the models care about — CNN's URL
+      # leakage, ANTARA's evergreen items, a cross-source duplicate filed under
+      # two sections, and a missing timestamp. A fixture that was merely
+      # well-formed would pass everything while proving nothing.
+      - name: Build the warehouse from a fixture
+        run: |
+          set -o pipefail
+          uv run python scripts/make_fixture.py --out data/raw
+          uv run kanal load
+
+      - name: dbt build
+        working-directory: dbt
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+        run: |
+          set -o pipefail
+          uv run dbt build --no-partial-parse
+
+      # A second load must be a no-op. Asserting it here means the idempotency
+      # claim is checked against a real DuckDB file on every push, not only in
+      # unit tests against a temporary directory.
+      - name: Assert the load is idempotent
+        run: |
+          set -o pipefail
+          uv run kanal load | tee second-load.log
+          grep -q "0 rows added" second-load.log

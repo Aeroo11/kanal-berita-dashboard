@@ -1,0 +1,13 @@
+
+    
+    
+    
+    create table "kanal"."main"."taxonomy_map" ("source" varchar,"channel" varchar,"kanal" varchar,"confidence" text,"notes" varchar)
+  ;
+    -- dbt seed --
+    
+          COPY "kanal"."main"."taxonomy_map" FROM 'C:\Users\Katana\Documents\Kuliah\Porto\kanal\dbt\seeds\taxonomy_map.csv' (FORMAT CSV, HEADER TRUE, DELIMITER ',')
+        
+
+;
+  

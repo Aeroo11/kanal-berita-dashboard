@@ -1,0 +1,92 @@
+version: 2
+
+models:
+  - name: fct_articles
+    description: >
+      The fact table. One row per article, and the only model anything
+      downstream should read. Still one row per article rather than per cluster:
+      dropping duplicates here would decide for every consumer what counts as a
+      duplicate, so the flags are carried instead.
+    columns:
+      - name: article_key
+        tests: [unique, not_null]
+
+      - name: cluster_id
+        description: >
+          Articles sharing a normalised headline. The split must partition by
+          cluster, never by row — a wire story republished by three outlets is
+          three rows and one story.
+        tests: [not_null]
+
+      - name: kanal
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - politik
+                  - ekonomi
+                  - olahraga
+                  - teknologi
+                  - hiburan
+                  - internasional
+                  - hukum-kriminal
+                  - gaya-hidup-kesehatan
+
+      - name: title
+        tests: [not_null, not_empty_string]
+
+      - name: source
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [antara, cnn, liputan6]
+
+      - name: cluster_size
+        tests:
+          - accepted_range:
+              arguments:
+                min_value: 1
+
+      - name: title_words
+        tests:
+          - accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 60
+
+  - name: mart_source_health
+    description: >
+      Per-source, per-day health of the data supply, plus the measured
+      properties that shape the modelling. Exists because a per-run exit code
+      only describes the run in front of you — this is the record that makes
+      "CNN has produced nothing since Tuesday" a query.
+    columns:
+      - name: source
+        tests: [not_null]
+      - name: ingest_date
+        tests: [not_null]
+      - name: articles
+        tests:
+          - accepted_range:
+              arguments:
+                min_value: 1
+      - name: url_leak_rate
+        tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: evergreen_rate
+        tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+
+    tests:
+      # One row per source per day, or the rates above are averages of averages.
+      - unique_combination:
+          arguments:
+            columns: [source, ingest_date]
