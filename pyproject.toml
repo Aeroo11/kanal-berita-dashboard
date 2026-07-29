@@ -14,10 +14,9 @@ dependencies = [
     # Config
     "pydantic>=2.10",
     "pydantic-settings>=2.7",
+    # Warehouse
+    "duckdb>=1.1",
 ]
-
-[project.optional-dependencies]
-warehouse = ["duckdb>=1.1", "pyarrow>=18.0"]
 
 [dependency-groups]
 dev = [

@@ -38,6 +38,15 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_load(args: argparse.Namespace) -> int:
+    from kanal.warehouse.loader import default_db_path, load
+
+    report = load(force=args.force)
+    print(report.summary())
+    print(f"warehouse: {default_db_path()}")
+    return 0
+
+
 def _cmd_status(_: argparse.Namespace) -> int:
     total = count_articles()
     print(f"landing zone : {settings.raw_dir}")
@@ -68,6 +77,15 @@ def main(argv: list[str] | None = None) -> int:
         help="skip the inter-request pause (tests only — do not use against live feeds)",
     )
     ingest.set_defaults(func=_cmd_ingest)
+
+    load_cmd = sub.add_parser("load", help="load the landing zone into DuckDB")
+    load_cmd.add_argument(
+        "--force",
+        action="store_true",
+        help="re-read files already recorded as loaded (repairs a corrupted load log; "
+        "the anti-join still prevents duplicate rows)",
+    )
+    load_cmd.set_defaults(func=_cmd_load)
 
     status = sub.add_parser("status", help="show landing-zone and feed-registry state")
     status.set_defaults(func=_cmd_status)
