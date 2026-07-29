@@ -1,0 +1,90 @@
+name: ingest
+
+# Hourly, because an RSS feed is a sliding window of its last 25-100 items:
+# there is no archive endpoint, so an hour that is not captured is gone for
+# good. This workflow is the reason the dataset exists at all, and it was
+# switched on before the rest of the pipeline was built.
+on:
+  schedule:
+    - cron: "7 * * * *" # :07 past the hour — off the busy top-of-hour slot
+  workflow_dispatch: # manual trigger, for backfilling after an outage
+
+# Never run two cycles at once. Overlapping runs would each read the partition,
+# both decide the same articles are new, and both write them.
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      # The landing zone lives on its own orphan branch so the code history
+      # stays readable. Cloning it into ./data means the ingest cycle sees the
+      # articles and feed state from every previous run, which is what makes
+      # deduplication and conditional requests work across runs.
+      - name: Check out the data branch
+        run: |
+          git config user.name "kanal-bot"
+          git config user.email "kanal-bot@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+            git fetch origin data --depth=1
+            git worktree add data origin/data
+          else
+            echo "data branch does not exist yet; creating it"
+            git worktree add --detach data
+            cd data
+            git checkout --orphan data
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Poll every feed
+        id: poll
+        run: uv run kanal ingest | tee cycle.log
+
+      - name: Summarise the cycle
+        if: always()
+        run: |
+          {
+            echo '### Ingestion cycle'
+            echo '```'
+            cat cycle.log || echo "(no log — the cycle failed before reporting)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Committed even when the poll step failed: a partial cycle still landed
+      # real articles, and discarding them would lose the hour permanently.
+      - name: Commit what landed
+        if: always()
+        working-directory: data
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "nothing new this cycle"
+            exit 0
+          fi
+          rows=$(find raw -name '*.jsonl' -exec cat {} + 2>/dev/null | wc -l || echo 0)
+          git commit -m "ingest $(date -u '+%Y-%m-%d %H:%M') UTC — ${rows} rows total"
+          # Retry once: another cycle can land between our fetch and our push.
+          git push origin HEAD:data || (git pull --rebase origin data && git push origin HEAD:data)

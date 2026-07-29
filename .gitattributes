@@ -1,0 +1,4 @@
+# Normalise line endings: LF in the repo, native in the working copy.
+* text=auto eol=lf
+
+uv.lock -diff linguist-generated

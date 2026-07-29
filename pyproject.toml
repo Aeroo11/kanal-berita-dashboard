@@ -1,0 +1,70 @@
+[project]
+name = "kanal"
+version = "0.1.0"
+description = "A model-lifecycle platform for Indonesian news classification: find the best model, deploy it, keep it honest."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Efan Ramdhani" }]
+
+dependencies = [
+    # Ingestion. Deliberately plain — see docs/decisions/ADR-002.
+    "httpx>=0.28",
+    "feedparser>=6.0.11",
+    # Config
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+]
+
+[project.optional-dependencies]
+warehouse = ["duckdb>=1.1", "pyarrow>=18.0"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+    "mypy>=1.14",
+    "respx>=0.22",          # httpx mocking, so ingestion tests never hit the network
+]
+
+[project.scripts]
+kanal = "kanal.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kanal"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+# RUF001/2/3 flag characters that look like ASCII but are not. Usually a good
+# catch; here they are load-bearing. Indonesian publishers separate their
+# boilerplate with en and em dashes ("Liputan6.com, Jakarta – "), and the
+# patterns that strip that boilerplate have to match the real characters.
+# Listing them is narrower than switching the rules off.
+allowed-confusables = ["–", "—"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src/kanal"]
+
+# feedparser ships no type information. Its return shape is genuinely dynamic
+# (feeds carry whatever elements the publisher chose), so `parse.py` treats
+# every field as untrusted and validates it — which is what the parse-failure
+# accounting is for.
+[[tool.mypy.overrides]]
+module = "feedparser.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

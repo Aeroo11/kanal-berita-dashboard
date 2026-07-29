@@ -1,0 +1,145 @@
+"""One ingestion cycle: poll every feed, land what is new, report what happened.
+
+The report is not decoration. RSS is a sliding window — an hour that is not
+captured is unrecoverable — so the cycle has to be loud about partial failure.
+A run where two sources succeeded and one tripped its breaker is *not* a
+success, and the summary says so.
+"""
+
+from __future__ import annotations
+
+import logging
+import time
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from pathlib import Path
+
+from kanal.config import settings
+from kanal.ingest.fetch import FeedFetcher
+from kanal.ingest.land import existing_keys, land_articles
+from kanal.ingest.parse import parse_feed
+from kanal.ingest.sources import ALL_FEEDS, Feed
+
+log = logging.getLogger(__name__)
+
+
+@dataclass
+class FeedOutcome:
+    feed: Feed
+    status: str
+    entries: int = 0
+    landed: int = 0
+    duplicates: int = 0
+    parse_failures: int = 0
+    error: str | None = None
+
+
+@dataclass
+class CycleReport:
+    started_at: datetime
+    finished_at: datetime
+    outcomes: list[FeedOutcome] = field(default_factory=list)
+
+    @property
+    def landed(self) -> int:
+        return sum(o.landed for o in self.outcomes)
+
+    @property
+    def duplicates(self) -> int:
+        return sum(o.duplicates for o in self.outcomes)
+
+    @property
+    def failed_feeds(self) -> list[FeedOutcome]:
+        return [o for o in self.outcomes if o.status in ("failed", "skipped_breaker")]
+
+    @property
+    def sources_seen(self) -> set[str]:
+        return {o.feed.source for o in self.outcomes if o.status in ("ok", "not_modified")}
+
+    @property
+    def healthy(self) -> bool:
+        """Every source produced at least one usable response.
+
+        Deliberately per *source*, not per feed: an individual channel going
+        quiet is normal, an entire publisher going dark is not.
+        """
+        return self.sources_seen == {f.source for f in ALL_FEEDS}
+
+    def summary(self) -> str:
+        lines = [
+            f"cycle {self.started_at:%Y-%m-%d %H:%M:%S} UTC "
+            f"({(self.finished_at - self.started_at).total_seconds():.1f}s)",
+            f"  landed {self.landed} new, {self.duplicates} already seen",
+        ]
+        by_status: dict[str, int] = {}
+        for o in self.outcomes:
+            by_status[o.status] = by_status.get(o.status, 0) + 1
+        lines.append("  feeds: " + ", ".join(f"{k}={v}" for k, v in sorted(by_status.items())))
+
+        for o in self.failed_feeds:
+            lines.append(f"  ! {o.feed.feed_id}: {o.status} ({o.error})")
+        if not self.healthy:
+            missing = {f.source for f in ALL_FEEDS} - self.sources_seen
+            lines.append(f"  !! no usable response from: {', '.join(sorted(missing))}")
+        return "\n".join(lines)
+
+
+def run_cycle(
+    feeds: tuple[Feed, ...] = ALL_FEEDS,
+    *,
+    root: Path | None = None,
+    sleep: bool = True,
+) -> CycleReport:
+    started = datetime.now(UTC)
+    outcomes: list[FeedOutcome] = []
+
+    # Read each partition's keys once per cycle rather than once per feed —
+    # a source has many feeds and they all land in the same partition.
+    key_cache: dict[str, set[str]] = {}
+
+    with FeedFetcher(sleep=sleep) as fetcher:
+        for index, feed in enumerate(feeds):
+            outcomes.append(_poll_one(fetcher, feed, root, key_cache))
+
+            # Space out requests; the delay belongs *between* feeds, so the
+            # last one does not pay for a pause nobody is waiting on.
+            if sleep and index < len(feeds) - 1:
+                time.sleep(settings.inter_request_delay_s)
+
+    return CycleReport(started, datetime.now(UTC), outcomes)
+
+
+def _poll_one(
+    fetcher: FeedFetcher,
+    feed: Feed,
+    root: Path | None,
+    key_cache: dict[str, set[str]],
+) -> FeedOutcome:
+    result = fetcher.fetch(feed)
+
+    # `not_modified`, `failed`, `skipped_breaker` — nothing new to land, and
+    # only the last two are problems.
+    if not result.has_content:
+        return FeedOutcome(feed, result.status, error=result.error)
+
+    report = parse_feed(feed, result.body or b"", result.fetched_at)
+
+    if feed.source not in key_cache:
+        key_cache[feed.source] = existing_keys(feed.source, result.fetched_at, root)
+
+    landing = land_articles(
+        report.articles,
+        feed_id=feed.feed_id,
+        fetched_at=result.fetched_at,
+        root=root,
+        known_keys=key_cache[feed.source],
+    )
+
+    return FeedOutcome(
+        feed=feed,
+        status="ok",
+        entries=report.total_entries,
+        landed=landing.written,
+        duplicates=landing.skipped_duplicates,
+        parse_failures=report.failures,
+    )
