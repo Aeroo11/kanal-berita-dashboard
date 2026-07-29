@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # See DATA.md. Feeds are published for syndication; the way to stay
     # welcome is to behave like a well-mannered consumer.
     user_agent: str = (
-        "kanal-research/0.1 (+https://github.com/Aeroo11/kanal) "
+        "kanal-research/0.1 (+https://github.com/Aeroo11/kanal-berita-dashboard) "
         "Indonesian news classification research; contact via GitHub issues"
     )
     request_timeout_s: float = 20.0

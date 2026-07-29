@@ -56,7 +56,7 @@ well-mannered consumer:
 The current `User-Agent`:
 
 ```
-kanal-research/0.1 (+https://github.com/Aeroo11/kanal)
+kanal-research/0.1 (+https://github.com/Aeroo11/kanal-berita-dashboard)
 Indonesian news classification research; contact via GitHub issues
 ```
 
