@@ -3,7 +3,7 @@
 Platform *model lifecycle* untuk klasifikasi berita Indonesia: **cari model
 terbaik, deploy, dan jaga supaya tetap jujur.**
 
-> **Status: Stage 1 berjalan — ingestion + warehouse.**
+> **Status: Stage 1 berjalan — ingestion, warehouse, dan dbt.**
 > README ini hanya menjelaskan apa yang sudah benar-benar dibangun. Bagian baru
 > ditambahkan setelah kodenya ada, bukan sebelumnya.
 
@@ -11,8 +11,8 @@ terbaik, deploy, dan jaga supaya tetap jujur.**
 
 ## Yang sudah jalan hari ini
 
-Lapisan ingestion yang mem-*polling* 25 RSS feed dari tiga penerbit Indonesia
-tiap jam, plus warehouse DuckDB yang membuat hasilnya bisa di-query.
+Ingestion yang mem-*polling* 25 RSS feed dari tiga penerbit Indonesia tiap jam,
+warehouse DuckDB, dan model dbt beserta *data contract*-nya.
 
 ```bash
 uv sync
@@ -20,13 +20,16 @@ uv run kanal status      # isi feed registry dan landing zone
 uv run kanal ingest      # satu siklus polling
 uv run kanal ingest      # jalankan lagi — nol baris baru
 uv run kanal load        # landing zone → DuckDB
+
+cd dbt && DBT_PROFILES_DIR=. uv run dbt build
 ```
 
 Siklus kedua yang mendaratkan **nol baris** itu bukan kebetulan — lihat bagian
 *Idempotency*.
 
 Terukur pada siklus pertama yang sungguhan: **1.270 artikel, 25/25 feed HTTP
-200, 27 detik**.
+200, 27 detik**. `dbt build`: **46 node, semua lolos** — 1 seed, 3 view,
+2 tabel, 40 test.
 
 ---
 
@@ -220,6 +223,44 @@ Dua properti yang wajib dimilikinya, keduanya di-test:
   sehingga proses load tetap murah saat landing zone tumbuh melewati ratusan
   ribu baris.
 
+### Data contract: yang dipilih adalah yang gagal diam-diam
+
+Test yang berguna bukan yang paling banyak, tapi yang menangkap kegagalan tanpa
+gejala. Empat *singular test* di `dbt/tests/` masing-masing ada karena satu
+skenario spesifik:
+
+| Contract | Kegagalan yang dicegah |
+|---|---|
+| `taxonomy_coverage` | Penerbit menambah section baru → artikel mengalir dengan label yang tidak pernah ditinjau siapa pun. Kerusakannya di **label**, tempat terburuk untuk kegagalan senyap |
+| `taxonomy_agrees_with_ingestion` | `sources.py` dan `taxonomy_map.csv` adalah dua ekspresi dari satu keputusan — dan dua salinan satu kebenaran pasti melenceng |
+| `no_future_publication` | Timestamp yang di-*post-date* akan tersortir ke masa depan dan masuk test set terlepas dari kapan artikelnya ditulis. Itu definisi *lookahead* |
+| `every_source_reported_today` | Penerbit menghilang. **Warn, bukan error** — penerbit yang diblokir itu keputusan yang harus diambil, bukan alasan menghentikan pemrosesan sumber yang sehat |
+
+Ditambah *source freshness*: warn di 2 jam, error di 6 jam. Ingestion jalan tiap
+jam, dan siklus yang terlewat tidak bisa di-backfill.
+
+Seed taksonomi membawa kolom `confidence` dan `notes` per channel, sehingga
+keputusan yang bersifat pertimbangan tertulis di tempat yang bisa dibantah. Ini
+sudah terbayar: **semua label `politik` kecuali 20 berasal dari mapping
+ber-confidence medium** (`nasional` milik CNN), yang memprediksi persis dari mana
+kebingungan politik/hukum-kriminal nanti akan datang.
+
+### Fixture CI harus mereproduksi masalahnya, bukan cuma skemanya
+
+CI tidak boleh menyentuh penerbit, jadi `dbt build` di CI berjalan di atas
+fixture sintetis. Fixture yang sekadar berbentuk benar akan lolos semua test
+sambil tidak membuktikan apa pun — jadi fixture-nya sengaja mereproduksi
+properti yang jadi perhatian model: kebocoran URL CNN, item evergreen ANTARA,
+satu berita kawat yang difile di bawah dua section berbeda, dan satu timestamp
+yang tidak terbaca.
+
+Versi pertamanya justru salah dengan cara yang instruktif. Judul sintetisnya
+diberi sufiks per **sumber**, bukan per feed, sehingga keempat feed ANTARA
+memancarkan judul identik — membentuk cluster duplikat palsu berukuran empat dan
+memproduksi **102 baris "label disagreement" yang seluruhnya artefak**. Model-nya
+benar; fixture-nya yang berbohong. Sekarang: tepat satu cluster lintas-sumber,
+yaitu berita kawat yang memang ditanam.
+
 ### Evolusi skema
 
 Feed berubah bentuk tanpa pemberitahuan. Liputan6 mengirim `<category>`, ANTARA
@@ -251,6 +292,16 @@ src/kanal/
     ├── duck.py            # setting DuckDB yang dipin; writer/reader terpisah
     ├── schema.py          # DDL raw_articles + _load_log
     └── loader.py          # landing zone → DuckDB, idempotent & incremental
+
+dbt/
+├── seeds/taxonomy_map.csv     # channel → kanal, dengan confidence + alasan
+├── models/staging/            # stg_articles: cast, derive, mark — tidak filter
+├── models/intermediate/       # cluster duplikat + join taksonomi
+├── models/marts/              # fct_articles, mart_source_health
+├── tests/                     # 4 singular test: kontrak datanya
+└── macros/generic_tests.sql   # accepted_range, not_empty_string, unique_combination
+
+scripts/make_fixture.py        # landing zone sintetis untuk CI
 ```
 
 Landing zone: `data/raw/source={source}/dt={YYYY-MM-DD}/{feed}-{HHMMSS}.jsonl`
@@ -307,9 +358,15 @@ CI menjalankan ruff, ruff format, mypy `--strict`, dan pytest pada tiap push.
 Disebutkan di sini supaya cakupannya terbaca jelas, dan supaya README ini tidak
 bisa disalahartikan sebagai deskripsi sistem yang sudah jadi:
 
-model dbt (staging → intermediate → marts) · data contract · orkestrasi ·
-empat kandidat model · *evaluation harness* · *promotion gate* · serving ·
-*confidence cascade* · deteksi drift · dashboard.
+orkestrasi (Dagster) · publikasi dataset ke Hugging Face · *near-duplicate
+clustering* dengan MinHash · empat kandidat model · *evaluation harness* ·
+*promotion gate* · serving · *confidence cascade* · deteksi drift · dashboard.
+
+Satu hal yang **diketahui belum beres**: CNN tidak menghasilkan apa pun saat
+ingestion berjalan dari runner GitHub, padahal normal dari mesin lokal. Siklus
+berikutnya akan melaporkan status HTTP-nya, dan itu yang menentukan responsnya.
+IP datacenter Amerika diblokir sementara IP residensial Indonesia tidak akan
+menjadi temuan nyata tentang pasokan datanya, bukan bug yang bisa ditambal.
 
 ## Lisensi
 
