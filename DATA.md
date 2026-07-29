@@ -1,100 +1,103 @@
-# Data sources, licensing, and polling policy
+# Sumber data, lisensi, dan kebijakan polling
 
-This project reads publicly syndicated RSS feeds from three Indonesian news
-publishers. This document states exactly what is collected, what is not, and
-how the collection behaves — because a research project that quietly takes more
-than it should is one that deserves to be blocked.
+Proyek ini membaca RSS feed publik dari tiga penerbit berita Indonesia. Dokumen
+ini menyatakan persis apa yang dikumpulkan, apa yang tidak, dan bagaimana
+pengumpulannya berperilaku — karena proyek riset yang diam-diam mengambil lebih
+dari haknya memang pantas diblokir.
 
-## Sources
+## Sumber
 
-| Publisher | Feeds | RSS index |
+| Penerbit | Feed | Indeks RSS |
 |---|---|---|
-| ANTARA (state news agency) | 11 | `https://www.antaranews.com/rss/` |
+| ANTARA (kantor berita negara) | 11 | `https://www.antaranews.com/rss/` |
 | CNN Indonesia | 7 | `https://www.cnnindonesia.com/{section}/rss` |
 | Liputan6 | 7 | `https://feed.liputan6.com/rss/{channel}` |
 
-## What is stored
+## Yang disimpan
 
-Only what the publisher chose to place in a syndication feed:
+Hanya apa yang penerbit sendiri tempatkan di dalam feed sindikasi:
 
-- headline
-- the feed's own summary or description
-- canonical article URL (the link back)
-- publisher and channel, as provenance
-- publication timestamp
-- fetch timestamp and feed identifier
+- judul
+- ringkasan atau deskripsi dari feed
+- canonical URL artikel (tautan balik ke sumber)
+- penerbit dan channel, sebagai *provenance*
+- waktu terbit
+- waktu pengambilan dan identitas feed
 
-## What is deliberately not stored
+## Yang sengaja tidak disimpan
 
-- **Article bodies.** No page beyond the feed is ever requested. There is no
-  scraper in this repository and adding one is explicitly out of scope.
-- **Images.** Thumbnail markup embedded in summaries is stripped at ingest.
-- **Anything behind a paywall, login, or `robots.txt` disallow.**
+- **Isi artikel.** Tidak ada halaman di luar feed yang pernah diminta. Tidak ada
+  scraper di repository ini, dan menambahkannya secara eksplisit di luar
+  cakupan.
+- **Gambar.** Markup thumbnail yang menempel di ringkasan dibuang saat ingest.
+- **Apa pun di balik paywall, login, atau larangan `robots.txt`.**
 
-Article text remains the property of its publisher. This repository stores
-syndicated metadata and links back to the original. Nothing here is a substitute
-for reading the source, and no full text is republished.
+Teks artikel tetap milik penerbitnya. Repository ini menyimpan metadata hasil
+sindikasi dan menautkan balik ke aslinya. Tidak ada di sini yang bisa
+menggantikan membaca sumbernya, dan tidak ada teks utuh yang diterbitkan ulang.
 
-## Polling policy
+## Kebijakan polling
 
-RSS exists to be consumed, and the way to stay welcome is to behave like a
-well-mannered consumer:
+RSS memang ada untuk dikonsumsi, dan cara tetap diterima adalah bersikap seperti
+konsumen yang tahu aturan:
 
-| Behaviour | Value |
+| Perilaku | Nilai |
 |---|---|
-| Poll interval | hourly, per feed |
-| Concurrency | **one request at a time** — never a parallel fan-out |
-| Pause between requests | 1 second |
-| Conditional requests | `If-None-Match` / `If-Modified-Since` on every poll |
-| Timeout | 20 s |
-| Retries | 3, exponential backoff, `Retry-After` honoured |
-| Retried statuses | 408, 425, 429, 5xx only |
-| Not retried | 403, 404 — these are verdicts, and retrying them is noise |
-| Circuit breaker | 3 consecutive failures → feed skipped for 1 hour |
-| User-Agent | descriptive, with a contact route |
+| Interval polling | tiap jam, per feed |
+| Konkurensi | **satu request pada satu waktu** — tidak pernah paralel |
+| Jeda antar request | 1 detik |
+| Conditional request | `If-None-Match` / `If-Modified-Since` pada tiap polling |
+| Timeout | 20 detik |
+| Percobaan ulang | 3 kali, exponential backoff, `Retry-After` dihormati |
+| Status yang diulang | hanya 408, 425, 429, 5xx |
+| Yang tidak diulang | 403, 404 — ini putusan, mengulanginya cuma bising |
+| Circuit breaker | 3 kegagalan berturut-turut → feed dilewati 1 jam |
+| User-Agent | deskriptif, memuat jalur kontak |
 
-The current `User-Agent`:
+`User-Agent` yang dipakai saat ini:
 
 ```
 kanal-research/0.1 (+https://github.com/Aeroo11/kanal-berita-dashboard)
 Indonesian news classification research; contact via GitHub issues
 ```
 
-Conditional requests matter more than they look: a feed polled hourly is
-unchanged most of the time, so the publisher answers `304` with no body. That
-is cheaper for them than for us.
+Conditional request lebih penting daripada kelihatannya: feed yang di-polling
+tiap jam sebagian besar waktu tidak berubah, sehingga penerbit cukup menjawab
+`304` tanpa body. Itu lebih hemat untuk mereka daripada untuk kami.
 
-## Why hourly, and why it cannot be less
+## Kenapa tiap jam, dan kenapa tidak bisa lebih jarang
 
-An RSS feed is a sliding window of its last 25–100 items. There is no archive
-endpoint and no `?since=` parameter. **An hour that is not captured cannot be
-recovered.** Hourly polling is the minimum rate that keeps the window from
-overtaking us on a busy news day; it is not an attempt to be first to anything.
+RSS feed adalah *sliding window* berisi 25–100 item terakhirnya. Tidak ada
+endpoint arsip dan tidak ada parameter `?since=`. **Jam yang tidak tertangkap
+tidak bisa dikembalikan.** Polling tiap jam adalah laju minimum yang menjaga
+jendela itu tidak menyalip kami di hari yang ramai berita; ini bukan usaha untuk
+menjadi yang pertama atas apa pun.
 
-## Labels
+## Label
 
-The label of an article is the channel it was syndicated on — an article from
-`antaranews.com/rss/ekonomi.xml` is labelled `ekonomi`. Publisher channels are
-mapped onto eight canonical classes in `src/kanal/ingest/sources.py`, where each
-judgement call is recorded with its reasoning.
+Label sebuah artikel adalah channel tempat ia disindikasikan — artikel dari
+`antaranews.com/rss/ekonomi.xml` berlabel `ekonomi`. Channel penerbit dipetakan
+ke delapan kelas kanonik di `src/kanal/ingest/sources.py`, dan setiap keputusan
+yang bersifat pertimbangan dicatat beserta alasannya di sana.
 
-These labels are the publishers' editorial decisions, not ground truth. They
-disagree with one another on syndicated stories, and that disagreement is
-measured rather than assumed away — see the label-noise ceiling in the
-evaluation.
+Label-label ini adalah keputusan redaksi penerbit, bukan kebenaran mutlak.
+Antar penerbit pun bisa berbeda untuk berita hasil sindikasi yang sama, dan
+perbedaan itu nanti akan **diukur**, bukan diasumsikan hilang — lihat rencana
+pengukuran plafon *label noise* di tahap evaluasi.
 
-## If you are a publisher
+## Kalau Anda penerbit
 
-If you would prefer this project not to poll your feeds, open an issue on the
-repository and the source will be removed. No further justification needed.
+Kalau Anda lebih suka proyek ini tidak mem-polling feed Anda, silakan buka
+*issue* di repository dan sumbernya akan dihapus. Tidak perlu penjelasan
+tambahan.
 
-## Redistribution
+## Redistribusi
 
-The derived dataset published to Hugging Face contains headlines, summaries,
-links and labels — the same syndicated metadata described above. It is intended
-for research and is not a substitute for the publishers' own content.
+Dataset turunan yang nanti diterbitkan ke Hugging Face berisi judul, ringkasan,
+tautan, dan label — metadata sindikasi yang sama seperti dijelaskan di atas.
+Ditujukan untuk riset, dan bukan pengganti konten milik penerbit.
 
-Seed corpora used for cold-start smoke tests carry their own licences:
+Korpus awal yang dipakai untuk uji coba *cold-start* punya lisensinya sendiri:
 
 - `indonesian-nlp/id_newspapers_2018` — CC-BY-4.0
-- `fahadh4ilyas/indonesian_news_datasets` — CC-BY-NC-4.0 (non-commercial)
+- `fahadh4ilyas/indonesian_news_datasets` — CC-BY-NC-4.0 (non-komersial)

@@ -1,82 +1,88 @@
 # KANAL
 
-A model-lifecycle platform for Indonesian news classification: **find the best
-model, deploy it, keep it honest.**
+Platform *model lifecycle* untuk klasifikasi berita Indonesia: **cari model
+terbaik, deploy, dan jaga supaya tetap jujur.**
 
-> **Status: Stage 1 in progress — ingestion.**
-> This README describes only what is built and running today. It gains a
-> section when the code does, and not before.
+> **Status: Stage 1 berjalan — ingestion + warehouse.**
+> README ini hanya menjelaskan apa yang sudah benar-benar dibangun. Bagian baru
+> ditambahkan setelah kodenya ada, bukan sebelumnya.
 
 ---
 
-## What exists right now
+## Yang sudah jalan hari ini
 
-An ingestion layer that polls 25 RSS feeds across three Indonesian publishers
-and lands new articles into a partitioned, append-only store.
+Lapisan ingestion yang mem-*polling* 25 RSS feed dari tiga penerbit Indonesia
+tiap jam, plus warehouse DuckDB yang membuat hasilnya bisa di-query.
 
 ```bash
 uv sync
-uv run kanal status      # feed registry and landing-zone state
-uv run kanal ingest      # one polling cycle
-uv run kanal ingest      # run it again — lands zero new rows
+uv run kanal status      # isi feed registry dan landing zone
+uv run kanal ingest      # satu siklus polling
+uv run kanal ingest      # jalankan lagi — nol baris baru
+uv run kanal load        # landing zone → DuckDB
 ```
 
-That second run landing nothing is the point, not a coincidence: see
-*Idempotency* below.
+Siklus kedua yang mendaratkan **nol baris** itu bukan kebetulan — lihat bagian
+*Idempotency*.
+
+Terukur pada siklus pertama yang sungguhan: **1.270 artikel, 25/25 feed HTTP
+200, 27 detik**.
 
 ---
 
-## The task (where this is going)
+## Masalah yang dikerjakan
 
-Classify an Indonesian news article into one of eight *kanal* — `politik`,
-`ekonomi`, `olahraga`, `teknologi`, `hiburan`, `internasional`,
-`hukum-kriminal`, `gaya-hidup-kesehatan` — **from the headline and RSS summary
-alone**, never the article body.
+Mengklasifikasikan artikel berita Indonesia ke salah satu dari delapan *kanal* —
+`politik`, `ekonomi`, `olahraga`, `teknologi`, `hiburan`, `internasional`,
+`hukum-kriminal`, `gaya-hidup-kesehatan` — **hanya dari judul dan ringkasan
+RSS**, tidak pernah dari isi artikel.
 
-Headline-only is a deliberate difficulty setting. Ten to twenty-five tokens is
-little enough that the task stays genuinely hard, which leaves room for the
-comparison this project is actually about: a TF-IDF model costing fractions of
-a cent against an LLM costing four orders of magnitude more, and the question
-of when that difference is worth paying.
+Judul-saja adalah tingkat kesulitan yang dipilih sengaja. Sepuluh sampai
+dua puluh lima token itu cukup sedikit untuk membuat tugasnya benar-benar sulit,
+sehingga tersisa ruang untuk perbandingan yang sebenarnya jadi inti proyek ini:
+model TF-IDF seharga pecahan sen melawan LLM yang empat orde besaran lebih
+mahal — dan pertanyaan kapan selisih itu layak dibayar.
 
-It also means no article-body scraping. Nothing is stored beyond what a
-publisher chose to syndicate.
+Konsekuensi lain: tidak ada *scraping* isi artikel. Tidak ada yang disimpan
+melebihi apa yang penerbit sendiri pilih untuk disebarkan lewat feed.
 
 ---
 
-## Why RSS, and where the labels come from
+## Kenapa RSS, dan dari mana label-nya datang
 
-The label of an article is **the section its publisher filed it under**. An
-article arriving on `antaranews.com/rss/ekonomi.xml` is labelled `ekonomi`.
+Label sebuah artikel adalah **section tempat penerbitnya mengarsipkan artikel
+itu**. Artikel yang muncul di `antaranews.com/rss/ekonomi.xml` berlabel
+`ekonomi`.
 
-That single decision is what makes the rest of the project possible. Labels
-arrive automatically, continuously, and free, so retraining has something new
-to learn from — rather than being a scheduled job that re-fits the same frozen
-dataset and calls itself MLOps.
+Satu keputusan itu yang membuat sisa proyek ini mungkin. Label datang otomatis,
+terus-menerus, dan gratis — sehingga *retraining* nanti punya sesuatu yang baru
+untuk dipelajari, bukan sekadar cron job yang mengulang *fitting* dataset beku
+lalu menyebut dirinya MLOps.
 
-### Sources
+### Sumber
 
-| Publisher | Feeds | Section in article URL | Item-level `<category>` |
+| Penerbit | Feed | Section di URL artikel | `<category>` per item |
 |---|---|---|---|
-| **ANTARA** (state wire agency) | 11 | no | no |
-| **CNN Indonesia** | 7 | **yes** | no |
-| **Liputan6** | 7 | **yes** | **yes** |
+| **ANTARA** (kantor berita negara) | 11 | tidak | tidak |
+| **CNN Indonesia** | 7 | **ya** | tidak |
+| **Liputan6** | 7 | **ya** | **ya** |
 
-Those differences are not an inconvenience — they are the experiment. See
-*Label leakage*.
+Perbedaan itu bukan gangguan — itu justru eksperimennya. Lihat *Kebocoran
+label*.
 
 ---
 
-## Engineering notes
+## Catatan engineering
 
-### Idempotency, over a source that cannot be backfilled
+### Idempotency, di atas sumber yang tidak bisa di-backfill
 
-An RSS feed is a sliding window of the last 25–100 items. There is no archive
-endpoint and no `?since=` parameter: **an hour that is not captured is gone
-permanently.** That single fact drives most of the design.
+RSS feed adalah *sliding window* berisi 25–100 item terakhir. Tidak ada endpoint
+arsip dan tidak ada parameter `?since=`: **jam yang tidak tertangkap hilang
+permanen.** Satu fakta itu menentukan sebagian besar desainnya.
 
-Polling hourly means seeing the same article many times. So identity is a hash
-of the *canonicalised* URL, not the raw one — the same article arrives as
+Polling tiap jam berarti melihat artikel yang sama berulang kali. Jadi identitas
+sebuah artikel adalah hash dari URL yang sudah di-*canonicalise*, bukan URL
+mentahnya — artikel yang sama datang sebagai
 
 ```
 https://www.antaranews.com/berita/123/judul?utm_source=rss
@@ -84,138 +90,229 @@ https://www.antaranews.com/berita/123/judul/
 http://antaranews.com/berita/123/judul#top
 ```
 
-and all three must reduce to one `article_key`. Canonicalisation forces https,
-drops `www.` and default ports, strips tracking parameters, sorts what remains,
-discards the fragment, and normalises trailing slashes — while deliberately
-*not* lowercasing the path, since some CMSes do serve case-sensitive slugs and
-folding them would merge genuinely different articles.
+dan ketiganya harus menyusut jadi satu `article_key`. Canonicalisation memaksa
+https, membuang `www.` dan port default, menghapus parameter tracking, mengurut
+sisanya, membuang fragment, dan menormalkan trailing slash — tapi **sengaja
+tidak** me-*lowercase* path, karena sebagian CMS memang menyajikan slug yang
+case-sensitive dan melipatnya akan menggabungkan artikel yang berbeda.
 
-Before writing, a cycle reads back which keys its target partition already
-holds and writes only what is new. Re-running a poll is therefore a no-op, and
-`kanal ingest` twice in a row lands zero rows the second time. That check reads
-from disk rather than from memory on purpose: an in-memory set is worthless
-across the process restart that is exactly when idempotency matters.
+Sebelum menulis, satu siklus membaca kembali key apa saja yang sudah ada di
+partisi tujuannya, lalu hanya menulis yang baru. Menjalankan ulang sebuah
+polling karena itu jadi *no-op*. Pembacaan itu dari disk, bukan dari set di
+memori — karena restart proses justru saat idempotency paling dibutuhkan.
 
-### Being a good guest
+### Jadi tamu yang tahu diri
 
-Feeds are published for syndication, and the way to stay welcome is to behave
-like a well-mannered consumer:
+Feed diterbitkan untuk disebarkan, dan cara tetap diterima adalah bersikap
+seperti konsumen yang tahu aturan:
 
-- conditional requests via `ETag` / `If-Modified-Since`, so an unchanged feed
-  costs the publisher a `304` and no body,
-- one request at a time with a pause between them — never a parallel fan-out,
-- a descriptive `User-Agent` with a contact route,
-- exponential backoff that honours `Retry-After`,
-- headline, summary, canonical URL, publisher and timestamp stored — **never
-  article bodies**, never republished text.
+- *conditional request* lewat `ETag` / `If-Modified-Since`, sehingga feed yang
+  tidak berubah cukup dijawab `304` tanpa body,
+- satu request pada satu waktu dengan jeda di antaranya — tidak pernah paralel,
+- `User-Agent` deskriptif yang memuat jalur kontak,
+- *exponential backoff* yang menghormati `Retry-After`,
+- yang disimpan hanya judul, ringkasan, canonical URL, penerbit, dan timestamp —
+  **tidak pernah isi artikel**, tidak pernah menerbitkan ulang teksnya.
 
-See [`DATA.md`](DATA.md).
+Selengkapnya di [`DATA.md`](DATA.md).
 
-### One bad source must not cost the others
+### Satu sumber bermasalah tidak boleh menjatuhkan yang lain
 
-Two publishers are known to be unreliable — Tempo returns `403` to unfamiliar
-user agents, Detik resets connections intermittently. A cycle that dies on the
-first failure loses the healthy feeds too, and that hour is unrecoverable.
+Dua penerbit diketahui tidak stabil — Tempo membalas `403` untuk User-Agent yang
+tidak dikenal, Detik memutus koneksi secara intermiten. Siklus yang mati di
+kegagalan pertama ikut kehilangan feed yang sehat, dan jam itu tidak bisa
+dikembalikan.
 
-So every feed is isolated, and a source failing repeatedly trips a circuit
-breaker and is skipped for a cooldown rather than retried every cycle. Failures
-are also classified rather than lumped together: `408/429/5xx` are transient
-and retried, while `403` and `404` are *verdicts* about who we are or what we
-asked for, and retrying them is pure noise.
+Jadi setiap feed diisolasi, dan sumber yang gagal berulang kali akan memicu
+*circuit breaker* lalu dilewati selama masa *cooldown*, bukan dicoba ulang tiap
+siklus. Kegagalan juga diklasifikasikan, tidak disamaratakan: `408/429/5xx`
+bersifat sementara dan layak diulang, sedangkan `403` dan `404` adalah
+**putusan** tentang siapa kita atau apa yang kita minta — mengulanginya cuma
+menambah bising.
 
-A cycle exits non-zero when an entire publisher produced no usable response, so
-a scheduled run goes red instead of quietly succeeding with a hole in the data.
-An individual channel going quiet is normal; a whole publisher going dark is
-not.
+Satu siklus keluar dengan status non-zero kalau ada penerbit yang sama sekali
+tidak memberi respons berguna, sehingga *scheduled run* menyala merah alih-alih
+sukses diam-diam dengan lubang di datanya. Satu channel yang sepi itu wajar;
+satu penerbit yang mati total tidak.
 
-### Label leakage, which is real here
+### Kebocoran label, yang di sini nyata dan terukur
 
-The label *is* feed provenance, so it leaks through several channels at once:
+Label **adalah** asal-usul feed, jadi ia bocor lewat beberapa jalur sekaligus.
+Diukur pada 1.270 baris pertama:
 
-- CNN puts the section in the article URL (`/nasional/2026...`),
-- Liputan6 puts it in the URL **and** an item-level `<category>`,
-- ANTARA does neither — its URLs are `/berita/{id}/{slug}`.
+| Sumber | URL artikel yang memuat labelnya sendiri |
+|---|---|
+| **CNN** | **600 / 700 (85,7%)** |
+| Liputan6 | 4 / 350 (1,1%) — tapi bocor lewat `<category>` |
+| ANTARA | 5 / 220 (2,3%) — kebetulan kata, bukan struktur |
 
-Any model shown a URL, a feed id, or a category scores ~100% and has learnt
-nothing at all. Those fields are stored for provenance and auditing, and are
-excluded from features by construction.
+Model apa pun yang melihat URL, feed id, atau category akan mendapat akurasi
+~100% dan tidak mempelajari apa pun. Field-field itu disimpan untuk *provenance*
+dan audit, dan dikecualikan dari fitur secara struktural.
 
-Publisher boilerplate is a subtler version of the same problem. `"Liputan6.com,
-Jakarta - "` prefixed to a summary identifies the publisher, and publishers
-have different section mixes — so the prefix alone is a partial label. It is
-stripped at ingest.
+Boilerplate penerbit adalah versi yang lebih halus dari masalah yang sama.
+`"Liputan6.com, Jakarta - "` di awal ringkasan mengidentifikasi penerbitnya, dan
+tiap penerbit punya komposisi kanal yang berbeda — jadi prefiks itu sendiri
+sudah setengah label. Dibuang saat ingest.
 
-The three-source contrast is what makes this demonstrable rather than merely
-asserted: ANTARA is clean enough to train on in isolation, so the F1 gap
-between an ANTARA-only model and an all-sources model *measures* what leakage
-manufactures.
+Kontras antar tiga sumber inilah yang membuatnya bisa **dibuktikan**, bukan
+sekadar diklaim: ANTARA cukup bersih untuk dilatih sendirian, sehingga selisih
+F1 antara model ANTARA-saja dan model semua-sumber **mengukur** berapa banyak
+yang "dihadiahkan" oleh kebocoran.
 
-### Schema evolution
+### Konten evergreen, dan kenapa ini mengubah temporal split
 
-Feeds change shape without warning. Liputan6 sends `<category>`, ANTARA does
-not; date formats differ; a publisher may start emitting `media:content` next
-month.
+Feed ANTARA mencampur *explainer* abadi ke dalam berita — profil, artikel
+"mengenal…", daftar jadwal, yang bertahan di feed tanpa batas waktu. Terukur:
 
-If parsing only kept the fields understood today, the day a feed changed would
-be a day of data silently discarded. Instead the raw layer keeps every scalar
-the publisher sent in an `extra` object alongside a `schema_version`, derives
-what it can, and records per-item parse failures rather than aborting a batch.
-A timestamp that cannot be parsed becomes `null` rather than a guess — a wrong
-publication time would corrupt the temporal split that the whole evaluation
-will rest on.
+| Sumber | Item berumur >30 hari |
+|---|---|
+| ANTARA | **141 / 220 (64%)** — sebagian hampir setahun |
+| Liputan6 | 42 / 350 |
+| CNN | **0 / 700** |
+
+Ini properti sumbernya, bukan bug parsing, dan dampaknya serius. *Temporal
+split* naif (train ≤ T−14 hari, test > T−7 hari) akan mendorong hampir seluruh
+baris ANTARA ke train dan meninggalkan test set yang **didominasi CNN — sumber
+paling bocor**. Evaluasinya akan tampak wajar dan tidak berarti apa-apa.
+
+Split-nya harus dibangun dengan tahu ini, jadi warehouse harus bisa
+menyatakannya: query umur per sumber dikunci di `tests/test_loader.py`. Timestamp
+yang tidak terbaca disimpan `null`, bukan ditebak — waktu terbit yang salah akan
+merusak justru split yang jadi fondasi seluruh evaluasi.
+
+### Setiap default DuckDB adalah default *host*
+
+`temp_directory` defaultnya path relatif `.tmp` yang di-resolve terhadap working
+directory; `memory_limit` sekitar 80% RAM yang dilaporkan mesin; `threads`
+sebanyak core host. Di laptop ini terbaca 25 GiB dan 20 thread. Di dalam CI
+runner atau container, default yang sama berarti "tulis spill ke direktori
+read-only, pesan memori yang tidak kamu punya, dan jalankan thread sepuluh kali
+lebih banyak dari core yang ada".
+
+Semuanya dipin di `warehouse/duck.py`, dan *extension autoload* dimatikan —
+tidak ada yang memakainya, dan kalau dibiarkan menyala DuckDB akan mencoba
+mengunduh lalu menulis ke `$HOME` saat query berjalan.
+
+### Satu writer, banyak reader
+
+Satu koneksi DuckDB mengeksekusi satu statement pada satu waktu. Membagi satu
+koneksi ke beberapa reader yang bersamaan akan mengantrekan semuanya di belakang
+query paling lambat, dan langsung *deadlock* begitu ada orchestrator. Jadi:
+tepat satu writer, dan reader mendapat koneksi pendek masing-masing. `writer()`
+dan `reader()` ada supaya batasan itu terlihat di kode, bukan ditemukan saat
+runtime.
+
+### Loader yang sengaja bodoh
+
+Loader membaca JSONL, melakukan *anti-join* pada `article_key`, memasukkan yang
+baru, dan mencatat file yang sudah dikonsumsi. Tidak ada pembersihan, tidak ada
+pembentukan ulang, tidak ada penafsiran — semuanya jatah dbt, tempat semua itu
+ter-*version*, ter-*test*, dan terlihat sebagai lineage. Loader yang diam-diam
+mentransformasi adalah loader yang keluarannya tidak bisa dijelaskan siapa pun.
+
+Dua properti yang wajib dimilikinya, keduanya di-test:
+
+- **Idempotent** — memuat file yang sama dua kali tidak menambah apa pun.
+  Anti-join juga melipat satu berita kantor berita yang mendarat di partisi dua
+  sumber menjadi satu baris.
+- **Incremental** — file yang sudah tercatat di `_load_log` tidak dibuka lagi,
+  sehingga proses load tetap murah saat landing zone tumbuh melewati ratusan
+  ribu baris.
+
+### Evolusi skema
+
+Feed berubah bentuk tanpa pemberitahuan. Liputan6 mengirim `<category>`, ANTARA
+tidak; format tanggal berbeda-beda; bulan depan bisa saja ada yang mulai
+mengirim `media:content`.
+
+Kalau parsing hanya menyimpan field yang dipahami hari ini, hari saat sebuah
+feed berubah adalah hari yang datanya hilang diam-diam. Sebagai gantinya, raw
+layer menyimpan **setiap** nilai skalar yang dikirim penerbit di dalam objek
+`extra` beserta `schema_version`, menurunkan apa yang bisa diturunkan, dan
+mencatat kegagalan parsing per item alih-alih membatalkan seluruh batch.
 
 ---
 
-## Layout
+## Struktur
 
 ```
 src/kanal/
-├── config.py              # env-driven settings; polling policy lives here
-├── cli.py                 # kanal ingest | status
-└── ingest/
-    ├── sources.py         # the feed registry + taxonomy mapping, with reasoning
-    ├── normalize.py       # URL canonicalisation, article_key, text cleaning
-    ├── fetch.py           # conditional GETs, backoff, circuit breaker
-    ├── parse.py           # feed bytes → Article records, failure-tolerant
-    ├── land.py            # partitioned append-only writes, idempotent
-    └── run.py             # one cycle, and an honest report of it
+├── config.py              # setting dari environment; polling policy ada di sini
+├── cli.py                 # kanal ingest | load | status
+├── ingest/
+│   ├── sources.py         # feed registry + peta taksonomi, lengkap dengan alasannya
+│   ├── normalize.py       # canonicalisation URL, article_key, pembersihan teks
+│   ├── fetch.py           # conditional GET, backoff, circuit breaker
+│   ├── parse.py           # bytes feed → Article, tahan terhadap kegagalan
+│   ├── land.py            # tulis append-only berpartisi, idempotent
+│   └── run.py             # satu siklus, dan laporan jujur tentangnya
+└── warehouse/
+    ├── duck.py            # setting DuckDB yang dipin; writer/reader terpisah
+    ├── schema.py          # DDL raw_articles + _load_log
+    └── loader.py          # landing zone → DuckDB, idempotent & incremental
 ```
 
 Landing zone: `data/raw/source={source}/dt={YYYY-MM-DD}/{feed}-{HHMMSS}.jsonl`
 
-Partitioned by source and UTC date so a day can be reprocessed in isolation,
-and so DuckDB and pyarrow can read the tree directly with partition pruning.
-One file per feed per cycle keeps writes append-only — nothing is ever
-rewritten, so an interrupted run cannot corrupt what came before.
+Dipartisi per sumber dan per tanggal UTC supaya satu hari bisa diproses ulang
+secara terpisah, dan supaya DuckDB serta pyarrow bisa membaca pohonnya langsung
+dengan *partition pruning*. Satu file per feed per siklus menjaga penulisan
+tetap *append-only* — tidak ada yang pernah ditulis ulang, sehingga run yang
+terputus tidak bisa merusak apa yang sudah mendarat.
 
 ---
 
-## Configuration
+## Konfigurasi
 
-Every setting reads from the environment with a `KANAL_` prefix; the defaults
-are what the scheduled job uses.
+Semua setting dibaca dari environment dengan prefiks `KANAL_`; nilai default di
+bawah ini yang dipakai oleh scheduled job.
 
-| Variable | Default | Purpose |
+| Variable | Default | Fungsi |
 |---|---|---|
-| `KANAL_DATA_DIR` | `./data` | Landing-zone root |
-| `KANAL_REQUEST_TIMEOUT_S` | `20` | Per-request timeout |
-| `KANAL_INTER_REQUEST_DELAY_S` | `1.0` | Pause between feeds |
-| `KANAL_MAX_RETRIES` | `3` | Attempts per feed on transient failure |
-| `KANAL_BREAKER_FAILURE_THRESHOLD` | `3` | Failures before a feed is tripped out |
-| `KANAL_BREAKER_COOLDOWN_S` | `3600` | How long a tripped feed stays skipped |
+| `KANAL_DATA_DIR` | `./data` | Root landing zone dan warehouse |
+| `KANAL_REQUEST_TIMEOUT_S` | `20` | Timeout per request |
+| `KANAL_INTER_REQUEST_DELAY_S` | `1.0` | Jeda antar feed |
+| `KANAL_MAX_RETRIES` | `3` | Percobaan per feed saat gagal sementara |
+| `KANAL_BREAKER_FAILURE_THRESHOLD` | `3` | Kegagalan sebelum feed dilewati |
+| `KANAL_BREAKER_COOLDOWN_S` | `3600` | Lama feed dilewati setelah breaker aktif |
+| `KANAL_DUCKDB_MEMORY_LIMIT` | `1GB` | Batas memori DuckDB |
+| `KANAL_DUCKDB_THREADS` | `2` | Thread DuckDB |
 
 ---
 
-## Not built yet
+## Testing
 
-Named here so the scope is legible, and so this README cannot be mistaken for a
-description of a finished system:
+**66 test, semuanya offline.** Respons feed di-*mock*; suite yang bergantung
+pada penerbit sedang hidup adalah suite yang gagal karena alasan di luar
+kodenya.
 
-warehouse and dbt models · data-quality contracts · orchestration · the four
-model candidates · the evaluation harness · promotion gates · serving ·
-the confidence cascade · drift detection · the dashboard.
+Bobotnya diarahkan ke hal-hal yang mudah salah tanpa ketahuan:
 
-## Licence
+- canonicalisation URL — semua varian nyata menyusut ke satu key, dan input yang
+  tidak layak **ditolak** alih-alih dikembalikan dalam bentuk rusak yang akan
+  menyebabkan tabrakan key
+- idempotency landing zone, termasuk setelah restart proses dan setelah baris
+  terakhir terpotong karena proses dimatikan di tengah penulisan
+- idempotency dan sifat incremental loader
+- pembersihan HTML dan boilerplate, termasuk markup yang rusak
+- query umur artikel per sumber, yang mengunci temuan evergreen di atas
 
-MIT — see [LICENSE](LICENSE). Article text belongs to its publishers; this
-repository stores only syndicated metadata and links back. See `DATA.md`.
+CI menjalankan ruff, ruff format, mypy `--strict`, dan pytest pada tiap push.
+
+---
+
+## Belum dibangun
+
+Disebutkan di sini supaya cakupannya terbaca jelas, dan supaya README ini tidak
+bisa disalahartikan sebagai deskripsi sistem yang sudah jadi:
+
+model dbt (staging → intermediate → marts) · data contract · orkestrasi ·
+empat kandidat model · *evaluation harness* · *promotion gate* · serving ·
+*confidence cascade* · deteksi drift · dashboard.
+
+## Lisensi
+
+MIT — lihat [LICENSE](LICENSE). Teks artikel tetap milik penerbitnya
+masing-masing; repository ini hanya menyimpan metadata hasil sindikasi dan
+menautkan balik ke sumber aslinya. Lihat [`DATA.md`](DATA.md).
