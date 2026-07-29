@@ -49,6 +49,20 @@ models:
               arguments:
                 min_value: 1
 
+      - name: url_leaks_label
+        description: >
+          True when the article's URL contains either its canonical label or
+          the publisher's own channel name. Both are complete giveaways, since
+          channel maps to label deterministically. Measured: CNN 100%,
+          Liputan6 98.9%, ANTARA 4.1% — so ANTARA is the only usable control.
+        tests: [not_null]
+
+      - name: url_leaks_channel
+        tests: [not_null]
+
+      - name: url_leaks_canonical
+        tests: [not_null]
+
       - name: title_words
         tests:
           - accepted_range:

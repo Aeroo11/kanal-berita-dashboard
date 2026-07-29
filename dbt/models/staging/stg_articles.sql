@@ -73,13 +73,26 @@ derived as (
 
         cast(published_at as date)                              as published_date,
 
-        -- Does this row's own URL contain its label? Materialising the leak as
-        -- a column is what turns "leakage is a risk" into a number anyone can
-        -- query, and lets the ANTARA-only vs all-sources experiment be defined
-        -- in SQL rather than described in prose.
-        contains(
-            lower(raw_link),
-            split_part(kanal, '-', 1)
+        -- Does this row's own URL give its label away?
+        --
+        -- Two forms, and both count. A URL may carry the *canonical* label
+        -- ('ekonomi'), or the publisher's own *channel* name ('bisnis') — and
+        -- channel maps to label deterministically, so either one is a complete
+        -- giveaway.
+        --
+        -- The first version of this column only checked the canonical form and
+        -- badly understated the problem: Liputan6 measured 1.4% when the real
+        -- figure is 98.9%, because its paths read /bisnis/read/... while its
+        -- label is 'ekonomi'. Corrected, the finding is sharper than the
+        -- original claim — it is not that CNN leaks, it is that ANTARA is the
+        -- only source that does not.
+        contains(lower(raw_link), lower(channel))               as url_leaks_channel,
+
+        contains(lower(raw_link), split_part(kanal, '-', 1))    as url_leaks_canonical,
+
+        (
+            contains(lower(raw_link), lower(channel))
+            or contains(lower(raw_link), split_part(kanal, '-', 1))
         )                                                       as url_leaks_label
 
     from typed

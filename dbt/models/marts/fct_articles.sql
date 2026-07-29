@@ -43,7 +43,14 @@ select
     is_cross_source_duplicate,
     is_cluster_representative,
     cluster_size,
+
+    -- The URL gives the label away on two of the three sources. Kept as three
+    -- columns because the *form* of the leak differs by publisher and the
+    -- distinction matters when arguing about which source can serve as a
+    -- control group.
     url_leaks_label,
+    url_leaks_channel,
+    url_leaks_canonical,
 
     -- ── shape ────────────────────────────────────────────────────────────
     title_chars,

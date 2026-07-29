@@ -141,13 +141,27 @@ satu penerbit yang mati total tidak.
 ### Kebocoran label, yang di sini nyata dan terukur
 
 Label **adalah** asal-usul feed, jadi ia bocor lewat beberapa jalur sekaligus.
-Diukur pada 1.270 baris pertama:
+Diukur pada 1.270 baris:
 
-| Sumber | URL artikel yang memuat labelnya sendiri |
-|---|---|
-| **CNN** | **600 / 700 (85,7%)** |
-| Liputan6 | 4 / 350 (1,1%) — tapi bocor lewat `<category>` |
-| ANTARA | 5 / 220 (2,3%) — kebetulan kata, bukan struktur |
+| Sumber | URL yang membocorkan label | Lewat nama channel | Lewat label kanonik |
+|---|---|---|---|
+| **CNN** | **100,0%** | 100,0% | 85,7% |
+| **Liputan6** | **98,9%** | 98,9% | 1,4% |
+| ANTARA | 4,1% | 3,6% | 2,3% — kebetulan kata, bukan struktur |
+
+**83,1% dari seluruh baris punya URL yang membocorkan jawabannya.** Hanya 215
+baris yang bersih, dan 211 di antaranya dari ANTARA.
+
+Angka Liputan6 itu adalah koreksi. Versi pertama pengukuran ini melaporkannya
+**1,4%**, karena hanya mengecek apakah URL memuat label *kanonik*. Liputan6
+memakai nama channel-nya sendiri — path-nya `/bisnis/read/…` sementara labelnya
+`ekonomi`. Padahal channel memetakan ke label secara deterministik, jadi
+membocorkan channel sama tuntasnya dengan membocorkan label.
+
+Setelah dikoreksi, temuannya justru lebih tajam daripada klaim awalnya: bukan
+"CNN bocor", melainkan **ANTARA adalah satu-satunya sumber yang tidak bocor.**
+Itulah yang menjadikannya kelompok kontrol — selisih F1 antara model ANTARA-saja
+dan model semua-sumber **mengukur** berapa banyak yang dihadiahkan kebocoran.
 
 Model apa pun yang melihat URL, feed id, atau category akan mendapat akurasi
 ~100% dan tidak mempelajari apa pun. Field-field itu disimpan untuk *provenance*
@@ -157,11 +171,6 @@ Boilerplate penerbit adalah versi yang lebih halus dari masalah yang sama.
 `"Liputan6.com, Jakarta - "` di awal ringkasan mengidentifikasi penerbitnya, dan
 tiap penerbit punya komposisi kanal yang berbeda — jadi prefiks itu sendiri
 sudah setengah label. Dibuang saat ingest.
-
-Kontras antar tiga sumber inilah yang membuatnya bisa **dibuktikan**, bukan
-sekadar diklaim: ANTARA cukup bersih untuk dilatih sendirian, sehingga selisih
-F1 antara model ANTARA-saja dan model semua-sumber **mengukur** berapa banyak
-yang "dihadiahkan" oleh kebocoran.
 
 ### Konten evergreen, dan kenapa ini mengubah temporal split
 
