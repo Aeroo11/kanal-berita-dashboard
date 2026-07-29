@@ -65,22 +65,60 @@ class CycleReport:
         """
         return self.sources_seen == {f.source for f in ALL_FEEDS}
 
+    def by_source(self) -> dict[str, dict[str, int]]:
+        """Per-source tallies. A publisher going dark is the failure that matters."""
+        out: dict[str, dict[str, int]] = {}
+        for o in self.outcomes:
+            bucket = out.setdefault(o.feed.source, {"feeds": 0, "ok": 0, "landed": 0, "failed": 0})
+            bucket["feeds"] += 1
+            bucket["landed"] += o.landed
+            if o.status in ("ok", "not_modified"):
+                bucket["ok"] += 1
+            else:
+                bucket["failed"] += 1
+        return out
+
     def summary(self) -> str:
         lines = [
             f"cycle {self.started_at:%Y-%m-%d %H:%M:%S} UTC "
             f"({(self.finished_at - self.started_at).total_seconds():.1f}s)",
             f"  landed {self.landed} new, {self.duplicates} already seen",
         ]
+
         by_status: dict[str, int] = {}
         for o in self.outcomes:
             by_status[o.status] = by_status.get(o.status, 0) + 1
         lines.append("  feeds: " + ", ".join(f"{k}={v}" for k, v in sorted(by_status.items())))
 
-        for o in self.failed_feeds:
-            lines.append(f"  ! {o.feed.feed_id}: {o.status} ({o.error})")
+        lines.append("  per source:")
+        for source, tally in sorted(self.by_source().items()):
+            mark = "  " if tally["ok"] else " !"
+            lines.append(
+                f"   {mark} {source:<10} {tally['ok']}/{tally['feeds']} feeds ok, "
+                f"{tally['landed']} landed"
+            )
+
+        # Every distinct failure reason, with the feeds it affected. Grouping
+        # matters: 7 feeds failing for one reason is one problem, not seven, and
+        # the reason is the only part worth acting on.
+        if self.failed_feeds:
+            reasons: dict[str, list[str]] = {}
+            for o in self.failed_feeds:
+                reasons.setdefault(f"{o.status}: {o.error}", []).append(o.feed.feed_id)
+            lines.append("  failures:")
+            for reason, feeds in sorted(reasons.items()):
+                shown = ", ".join(feeds[:4]) + (
+                    f" (+{len(feeds) - 4} more)" if len(feeds) > 4 else ""
+                )
+                lines.append(f"    {reason}")
+                lines.append(f"      affected: {shown}")
+
         if not self.healthy:
             missing = {f.source for f in ALL_FEEDS} - self.sources_seen
-            lines.append(f"  !! no usable response from: {', '.join(sorted(missing))}")
+            lines.append(
+                f"  !! NO usable response from: {', '.join(sorted(missing))} "
+                f"— this hour is lost for those sources and cannot be backfilled"
+            )
         return "\n".join(lines)
 
 

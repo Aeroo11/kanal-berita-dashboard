@@ -64,7 +64,14 @@ jobs:
 
       - name: Poll every feed
         id: poll
-        run: uv run kanal ingest | tee cycle.log
+        run: |
+          # pipefail is not optional here. Without it bash reports the exit
+          # status of `tee`, which always succeeds, so a cycle that lost an
+          # entire publisher would still be reported as green. That is exactly
+          # what happened on the first run: CNN returned nothing, `kanal ingest`
+          # exited 1 as designed, and the pipe swallowed it.
+          set -o pipefail
+          uv run kanal ingest | tee cycle.log
 
       - name: Summarise the cycle
         if: always()
