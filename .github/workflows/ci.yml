@@ -77,3 +77,31 @@ jobs:
           set -o pipefail
           uv run kanal load | tee second-load.log
           grep -q "0 rows added" second-load.log
+
+      # Catches a broken code location before it reaches a run, and — more
+      # usefully — catches the asset graph silently splitting in two. dbt names
+      # its source `kanal.raw_articles`, which becomes the key `kanal/raw_articles`
+      # while the Python asset that writes that table is keyed `raw_articles`. Both
+      # nodes exist, nothing connects them, every asset materialises and every
+      # check passes, and the one reason Dagster is here — tracing a number in a
+      # mart back to the feed it came from — quietly stops working.
+      - name: Validate the Dagster code location
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+        run: uv run dagster definitions validate -m kanal.orchestration.definitions
+
+      - name: Assert the asset graph is connected end to end
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+        run: uv run python scripts/check_lineage.py
+
+      # Runs the whole transformation half through the orchestrator, so the
+      # Dagster wiring is exercised rather than merely parsed.
+      - name: Execute the transform job
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+          DAGSTER_HOME: ${{ runner.temp }}/dagster
+        run: |
+          set -o pipefail
+          mkdir -p "$DAGSTER_HOME" && touch "$DAGSTER_HOME/dagster.yaml"
+          uv run dagster job execute -m kanal.orchestration.definitions -j transform_job

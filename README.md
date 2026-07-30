@@ -22,6 +22,10 @@ uv run kanal ingest      # jalankan lagi — nol baris baru
 uv run kanal load        # landing zone → DuckDB
 
 cd dbt && DBT_PROFILES_DIR=. uv run dbt build
+
+# Atau lewat orchestrator, dengan lineage graph yang bisa diklik
+export DBT_PROFILES_DIR=$PWD/dbt
+uv run dagster dev -m kanal.orchestration.definitions
 ```
 
 Siklus kedua yang mendaratkan **nol baris** itu bukan kebetulan — lihat bagian
@@ -324,6 +328,57 @@ memproduksi **102 baris "label disagreement" yang seluruhnya artefak**. Model-ny
 benar; fixture-nya yang berbohong. Sekarang: tepat satu cluster lintas-sumber,
 yaitu berita kawat yang memang ditanam.
 
+### Kenapa orchestrator di skala ini
+
+Terus terang: di ~10⁵ baris Anda **tidak butuh** orchestrator. Sebuah Makefile
+dan dua cron job memindahkan byte yang sama, dan itu memang yang dipakai proyek
+ini untuk sementara.
+
+Kompleksitasnya dibeli untuk tiga hal yang tidak bisa diberikan Makefile:
+
+1. **Lineage sebagai graph.** `feeds → landing zone → warehouse → staging →
+   intermediate → marts`, satu DAG utuh yang bisa diklik. Setiap kegagalan di
+   proyek ini sejauh ini adalah pertanyaan *"angka ini dari mana?"*, dan lineage
+   menjawab kelas pertanyaan itu secara langsung.
+2. **Asset check yang tinggal di sebelah asset-nya.** Kontrak soal data
+   ter-*model* sudah ada di dbt. Kontrak soal **ingestion** tidak punya tempat
+   selain exit code CLI — dan exit code itu ditelan sebuah pipe selama sehari
+   sementara satu penerbit hilang tanpa suara.
+3. **Partisi, yang memberi backfill gratis.** Hari adalah partisi alaminya.
+
+`dagster-dbt` menarik setiap model dbt jadi asset dan setiap dbt test jadi asset
+check, sehingga satu graph mencakup ingestion **dan** transformasi. Dua DAG
+terpisah — satu di Makefile, satu di dalam dbt — masing-masing benar, dan tidak
+satu pun bisa menjawab "angka ini dari mana" tanpa manusia menyambungkannya
+sendiri.
+
+Yang **tidak** dipakai: Dagster Cloud, executor Kubernetes, IO manager custom.
+`dagster dev` lokal, `dagster job execute` di CI.
+
+### Graph yang terbelah tanpa satu pun gejala
+
+Bug pertama di lapisan ini adalah jenis yang lolos semua pemeriksaan lain.
+
+dbt mendeklarasikan source-nya sebagai `kanal.raw_articles`, yang oleh
+`dagster-dbt` menjadi asset key **`kanal/raw_articles`** — sementara asset Python
+yang menulis tabel itu ber-key **`raw_articles`**. Kedua node lalu sama-sama ada,
+tidak ada yang menghubungkannya, dan lineage view menampilkan **dua klaster yang
+masing-masing tampak sehat**.
+
+Setiap asset ter-materialisasi. Setiap check lolos. Dan satu-satunya alasan
+orchestrator ini ditambahkan — bisa melacak angka di mart kembali ke feed
+asalnya — berhenti bekerja, diam-diam.
+
+Diperbaiki dengan `KanalDbtTranslator` yang menyamakan key source dbt dengan
+asset Python yang menulisnya. Dan `scripts/check_lineage.py` menegaskannya di CI:
+ia berjalan dari akar ingestion dan menuntut semuanya terjangkau. Sudah saya uji
+dengan mencabut translator-nya — check-nya gagal dan menyebut penyebab persisnya:
+
+```
+FAIL  stg_articles depends on 'kanal/raw_articles', which is not an asset in this graph
+FAIL  not reachable from the ingestion root: int_articles_deduped, stg_articles
+```
+
 ### Evolusi skema
 
 Feed berubah bentuk tanpa pemberitahuan. Liputan6 mengirim `<category>`, ANTARA
@@ -421,9 +476,9 @@ CI menjalankan ruff, ruff format, mypy `--strict`, dan pytest pada tiap push.
 Disebutkan di sini supaya cakupannya terbaca jelas, dan supaya README ini tidak
 bisa disalahartikan sebagai deskripsi sistem yang sudah jadi:
 
-orkestrasi (Dagster) · publikasi dataset ke Hugging Face · *near-duplicate
-clustering* dengan MinHash · empat kandidat model · *evaluation harness* ·
-*promotion gate* · serving · *confidence cascade* · deteksi drift · dashboard.
+publikasi dataset ke Hugging Face · *near-duplicate clustering* dengan MinHash ·
+empat kandidat model · *evaluation harness* · *promotion gate* · serving ·
+*confidence cascade* · deteksi drift · dashboard.
 
 Satu hal yang **diketahui belum beres**: CNN tidak menghasilkan apa pun saat
 ingestion berjalan dari runner GitHub, padahal normal dari mesin lokal. Siklus

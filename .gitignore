@@ -28,6 +28,11 @@ dbt/logs/
 dbt/dbt_packages/
 dbt/.user.yml
 
+# Dagster run storage and event logs — local state, regenerated on demand.
+.dagster_home/
+.tmp_dagster_home_*/
+tmp*/
+
 # Keep small fixtures used by tests
 !/tests/fixtures/
 

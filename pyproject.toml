@@ -27,10 +27,18 @@ dev = [
     "respx>=0.22",          # httpx mocking, so ingestion tests never hit the network
     "dbt-core>=1.9",
     "dbt-duckdb>=1.9",
+    "dagster>=1.9",
+    "dagster-dbt>=0.25",
+    "dagster-webserver>=1.9",
 ]
 
 [project.scripts]
 kanal = "kanal.cli:main"
+
+# Lets `dagster dev` find the code location without a -m flag every time.
+[tool.dagster]
+module_name = "kanal.orchestration.definitions"
+code_location_name = "kanal"
 
 [build-system]
 requires = ["hatchling"]
