@@ -1,0 +1,230 @@
+# Evaluation protocol
+
+**Written before any model was run.** Committed on 2026-07-30, when the only
+numbers in this repository described the *data* — not a single classifier had been
+fitted.
+
+That ordering is the point. A protocol written after seeing results is not a
+protocol; it is a rationalisation, and it is indistinguishable from one written in
+advance once the commit history is squashed. So: every threshold, every test, and
+every rule about what counts as a win is fixed here, in advance, and the git
+history proves when.
+
+If a decision below turns out to be wrong, it gets **changed in a commit that
+says so and explains why** — not quietly adjusted until the numbers look better.
+
+---
+
+## The task
+
+Assign an Indonesian news article to one of eight *kanal* from its **headline and
+RSS summary only**. Never the article body — none is collected.
+
+Eight classes: `politik`, `ekonomi`, `olahraga`, `teknologi`, `hiburan`,
+`internasional`, `hukum-kriminal`, `gaya-hidup-kesehatan`.
+
+## The metric
+
+**Primary: macro-F1.** Chosen before looking at the class distribution, and the
+distribution justifies it: `hukum-kriminal` has roughly a sixth of the support of
+`gaya-hidup-kesehatan`. Accuracy and micro-F1 would let a model ignore the small
+classes and still look good; macro-F1 weights every class equally.
+
+**Reported alongside, always:**
+
+- per-class F1, precision and recall — because macro-F1 hides *which* class
+  collapsed
+- the confusion matrix
+- micro-F1 and accuracy, for comparability with other work
+- **p95 latency** per prediction, measured warm at batch size 1
+- **USD per 1000 predictions**
+- **ECE** (expected calibration error), 15 equal-mass bins
+
+A candidate is never described by macro-F1 alone. The whole reason this project
+exists is that a single number hides the trade-off.
+
+---
+
+## Splitting
+
+### Temporal, not random
+
+```
+train  published_at <= T - 14 days
+val    T - 14 days  <  published_at <= T - 7 days
+test   published_at >  T - 7 days
+```
+
+where `T` is the split creation time, recorded in the manifest.
+
+Random splitting is dishonest for this task. News topics emerge and fade; a model
+tested on the same week it trained on is asked an easier question than the one it
+will face in production. **Both numbers will be reported** — the random-split
+score alongside the temporal one — and the gap quantified explicitly, because
+that gap is what most portfolio numbers are unknowingly quoting.
+
+### Cluster-aware, never row-aware
+
+ANTARA is a wire agency; its stories reappear near-verbatim on other sites hours
+later, with different URLs and correctly different `article_key`s. A split that
+partitions by row puts one copy in train and another in test, and then measures
+memorisation while calling it generalisation.
+
+**Splitting partitions by `cluster_id`.** Every article in a cluster lands on the
+same side. This is asserted by a test, not assumed.
+
+### Evergreen-aware
+
+ANTARA mixes explainers, profiles and fixture lists into its live news feeds:
+59% of its articles were over 30 days old when fetched, against 0% for CNN and
+Republika. A naive temporal split therefore pushes almost all ANTARA rows into
+train and leaves a test set dominated by the publishers that leak their label
+through the URL.
+
+So after splitting, **the source composition of each split is reported and
+checked**. If the test set is more than 80% a single publisher, the split is
+rejected and the reason recorded — a test set that is effectively one publisher
+measures that publisher, not the task.
+
+### Frozen manifest
+
+Every split is written to a manifest containing the article keys per split, the
+cluster assignment, `T`, the code version, and a SHA-256 over the whole thing.
+
+An evaluation result is only valid if it names the manifest hash it ran against.
+Two candidates compared on different splits are not compared at all, and without
+this the mistake is invisible.
+
+---
+
+## Leakage
+
+The label **is** feed provenance, and it leaks: CNN's article URLs contain their
+section 100% of the time, Liputan6's 98.6%, Republika's 35.6%, ANTARA's 4.1%.
+
+**Features may only ever be derived from `title` and `summary`.**
+
+Forbidden as features, permanently: `canonical_url`, `raw_link`, `source`,
+`channel`, `feed_id`, `article_key`, `cluster_id`, `published_at`, `fetched_at`,
+and every `url_leaks_*` column. A test asserts the feature vector is invariant to
+all of them.
+
+### The leakage experiment
+
+Because ANTARA is nearly clean and the others are not, the cost of leakage can be
+*measured* rather than asserted:
+
+1. train on the clean subset (`NOT url_leaks_label`) only
+2. train on everything
+3. report the macro-F1 gap on a common test set
+
+That gap is the headline finding this dataset makes possible.
+
+---
+
+## What counts as a win
+
+### Minimum detectable effect: 0.01 macro-F1
+
+Declared here, in advance. A challenger must beat the incumbent by more than this
+for the difference to be treated as real. The figure is deliberately larger than
+the noise floor a few hundred test rows can resolve, and small enough that a
+genuine improvement is not dismissed.
+
+### Significance, not point estimates
+
+Two tests, both required:
+
+- **Paired bootstrap**, 10 000 resamples over the test set, giving a 95%
+  confidence interval on Δmacro-F1. Promotion requires the **lower bound** to
+  exceed the MDE — not the point estimate.
+- **McNemar's exact test** on paired predictions, requiring p < 0.05.
+
+Paired, because both candidates see the same test rows and unpaired tests throw
+away that structure.
+
+### No per-class regression
+
+No canonical class may lose more than 0.05 F1 relative to the incumbent, even if
+macro-F1 improves. Macro-F1 can rise while a small class collapses entirely, and
+a model that has stopped recognising `hukum-kriminal` is not an improvement.
+
+### Calibration is a hard requirement
+
+**ECE ≤ 0.08**, measured on validation after temperature scaling.
+
+This is not decoration. The confidence-gated cascade planned for Stage 4 escalates
+to the expensive model when the cheap one is unsure — and that gate is meaningless
+if the confidence is not calibrated. Fine-tuned transformers are systematically
+overconfident, so this must be measured rather than hoped for.
+
+---
+
+## Cost accounting
+
+Cost is a first-class metric here, and there are two standard ways to lie about
+it. Both are ruled out in advance.
+
+**LLM calls are priced at published list price, even when a free tier is used.**
+A free-tier call costs $0, and pricing it at $0 would make the comparison
+meaningless. The price book lives in a table, versioned, next to the data.
+
+**Self-hosted models are priced at amortised compute, never zero.** "Self-hosted
+is free" is the most common falsehood in cost comparisons. TF-IDF and IndoBERT
+inference cost vCPU-seconds; those are multiplied by a stated cloud rate and the
+rate is recorded with the result.
+
+**Failures count.** A call that returns unparseable output is scored **wrong**,
+not dropped, and its tokens are still billed. Silently discarding malformed LLM
+responses is the standard way an LLM baseline gets flattered.
+
+**Latency is measured, not estimated**, warm, at batch size 1, on the same
+machine as the other candidates.
+
+---
+
+## The candidates
+
+Four, not two. Two candidates is an A/B test; four is a comparison.
+
+| candidate | why it is in the set |
+|---|---|
+| **majority class** | Makes every other number credible. Without it, "0.84 macro-F1" is unanchored |
+| **TF-IDF + LinearSVC** | The honest baseline. If it lands within a few points of a transformer at 1/1000th the cost, that is the finding |
+| **IndoBERT-lite** | A real fine-tune, on CPU, to keep the cost story real |
+| **LLM zero-shot** | No training data at all, four orders of magnitude more expensive |
+
+All four implement one `Candidate` protocol, so the harness cannot accidentally
+treat them differently.
+
+---
+
+## Reproducibility
+
+Every evaluation run records: the manifest hash, the git commit, the candidate
+configuration, every metric above, the measured latency and cost, and the random
+seed. A result that cannot state its manifest hash is not a result.
+
+---
+
+## Known limitations of this protocol
+
+Stated now, before they can become excuses later.
+
+**The clean subset is small.** At the time of writing, 229 of 1,295 rows had a URL
+that does not leak — and all eight classes survive in that subset, but thinly. The
+leakage experiment will be underpowered until more data accumulates. Sample sizes
+will be reported with every result, and a result on fewer than 150 test rows will
+be labelled provisional.
+
+**The labels are not ground truth.** They are editorial decisions, and publishers
+disagree about syndicated stories. That disagreement rate is an empirical ceiling
+on achievable macro-F1, and it will be measured on cross-source duplicate
+clusters rather than assumed away.
+
+**CNN is absent from CI-collected data.** It answers HTTP 403 to datacentre IPs.
+Any result computed on CI data describes three publishers, not four, and will say
+so.
+
+**One task, one language.** Nothing here generalises to another taxonomy or
+another language without re-measuring.
