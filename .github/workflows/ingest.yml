@@ -18,6 +18,22 @@ concurrency:
 permissions:
   contents: write
 
+env:
+  # CNN and Tempo sit behind Cloudflare and answer 403 to GitHub's datacentre
+  # IPs. Verified: from an Indonesian address CNN serves 100 items to *any*
+  # request, including one with an empty User-Agent, so the block is by origin
+  # rather than identity. The two publishers that do work from CI — ANTARA and
+  # Liputan6 — are exactly the two not fronted by Cloudflare.
+  #
+  # Declaring it here rather than in the source registry keeps the reason where
+  # it belongs: reachability is a property of *where this runs*, not of the
+  # publisher. Locally the variable is unset, so a CNN failure is red there.
+  #
+  # They are still polled and still reported; they just no longer leave every
+  # run permanently red for a cause that is understood and cannot be fixed from
+  # here. A red light that never goes out is not a signal.
+  KANAL_EXPECT_UNREACHABLE: cnn
+
 jobs:
   poll:
     runs-on: ubuntu-latest

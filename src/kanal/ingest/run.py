@@ -57,13 +57,39 @@ class CycleReport:
         return {o.feed.source for o in self.outcomes if o.status in ("ok", "not_modified")}
 
     @property
-    def healthy(self) -> bool:
-        """Every source produced at least one usable response.
+    def expected_sources(self) -> set[str]:
+        """Sources this environment expects to reach.
 
-        Deliberately per *source*, not per feed: an individual channel going
-        quiet is normal, an entire publisher going dark is not.
+        Excludes those declared unreachable here — CNN and Tempo answer 403 to
+        GitHub's datacentre IPs while serving any request from Indonesia. They
+        are still polled and still reported; they just cannot make an otherwise
+        healthy cycle fail forever.
         """
-        return self.sources_seen == {f.source for f in ALL_FEEDS}
+        return {f.source for f in ALL_FEEDS} - settings.unreachable_sources
+
+    @property
+    def missing_sources(self) -> set[str]:
+        """Expected publishers that produced nothing usable."""
+        return self.expected_sources - self.sources_seen
+
+    @property
+    def unexpectedly_reachable(self) -> set[str]:
+        """Sources declared unreachable that answered anyway.
+
+        Worth surfacing: it means the declaration is stale and the exception can
+        be removed. An exception nobody revisits is how a temporary workaround
+        becomes permanent.
+        """
+        return self.sources_seen & settings.unreachable_sources
+
+    @property
+    def healthy(self) -> bool:
+        """Every *expected* source produced at least one usable response.
+
+        Deliberately per source, not per feed: an individual channel going quiet
+        is normal, an entire publisher going dark is not.
+        """
+        return not self.missing_sources
 
     def by_source(self) -> dict[str, dict[str, int]]:
         """Per-source tallies. A publisher going dark is the failure that matters."""
@@ -92,10 +118,18 @@ class CycleReport:
 
         lines.append("  per source:")
         for source, tally in sorted(self.by_source().items()):
-            mark = "  " if tally["ok"] else " !"
+            declared = source in settings.unreachable_sources
+            if tally["ok"]:
+                mark = "  "
+            elif declared:
+                # Failing as declared. Reported, but not a surprise.
+                mark = " ~"
+            else:
+                mark = " !"
+            note = "  (declared unreachable here)" if declared else ""
             lines.append(
                 f"   {mark} {source:<10} {tally['ok']}/{tally['feeds']} feeds ok, "
-                f"{tally['landed']} landed"
+                f"{tally['landed']} landed{note}"
             )
 
         # Every distinct failure reason, with the feeds it affected. Grouping
@@ -113,10 +147,15 @@ class CycleReport:
                 lines.append(f"    {reason}")
                 lines.append(f"      affected: {shown}")
 
-        if not self.healthy:
-            missing = {f.source for f in ALL_FEEDS} - self.sources_seen
+        if self.unexpectedly_reachable:
             lines.append(
-                f"  !! NO usable response from: {', '.join(sorted(missing))} "
+                f"  ~~ {', '.join(sorted(self.unexpectedly_reachable))} answered despite being "
+                f"declared unreachable — the declaration is stale and can be removed"
+            )
+
+        if not self.healthy:
+            lines.append(
+                f"  !! NO usable response from: {', '.join(sorted(self.missing_sources))} "
                 f"— this hour is lost for those sources and cannot be backfilled"
             )
         return "\n".join(lines)

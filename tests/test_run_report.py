@@ -15,6 +15,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
+from kanal.config import settings
 from kanal.ingest.run import CycleReport, FeedOutcome
 from kanal.ingest.sources import ALL_FEEDS, CNN, LIPUTAN6, feeds_for
 
@@ -68,6 +71,81 @@ class TestHealth:
             for f in ALL_FEEDS
         ]
         assert report(outcomes).healthy is False
+
+
+class TestDeclaredUnreachable:
+    """CNN answers 403 to GitHub's datacentre IPs and 200 to Indonesia.
+
+    Verified: from an Indonesian address CNN serves 100 items to any request,
+    including one with an empty User-Agent, so the block is by origin. The two
+    publishers reachable from CI are exactly the two not behind Cloudflare.
+
+    A run left permanently red for a cause that is understood and cannot be
+    fixed from CI stops being a signal, so the environment declares the
+    exception. The source is still polled and still reported — it just cannot
+    fail an otherwise healthy cycle forever.
+    """
+
+    def test_a_declared_source_failing_does_not_fail_the_cycle(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(settings, "expect_unreachable", "cnn")
+        outcomes = [
+            FeedOutcome(f, "failed", error="HTTP 403")
+            if f.source == CNN.name
+            else FeedOutcome(f, "ok", landed=50)
+            for f in ALL_FEEDS
+        ]
+        rep = report(outcomes)
+        assert rep.healthy is True
+        assert rep.missing_sources == set()
+
+    def test_it_is_still_reported(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(settings, "expect_unreachable", "cnn")
+        outcomes = [
+            FeedOutcome(f, "failed", error="HTTP 403")
+            if f.source == CNN.name
+            else FeedOutcome(f, "ok", landed=50)
+            for f in ALL_FEEDS
+        ]
+        text = report(outcomes).summary()
+        # Excluded from the verdict, not from the record.
+        assert "declared unreachable here" in text
+        assert "HTTP 403" in text
+
+    def test_an_undeclared_source_still_fails_the_cycle(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(settings, "expect_unreachable", "cnn")
+        outcomes = [
+            FeedOutcome(f, "failed", error="timeout")
+            if f.source == LIPUTAN6.name
+            else FeedOutcome(f, "ok", landed=50)
+            for f in ALL_FEEDS
+        ]
+        rep = report(outcomes)
+        assert rep.healthy is False
+        assert rep.missing_sources == {LIPUTAN6.name}
+
+    def test_no_declaration_means_cnn_failing_is_red(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # The local default. A CNN failure on a laptop is a real problem.
+        monkeypatch.setattr(settings, "expect_unreachable", "")
+        outcomes = [
+            FeedOutcome(f, "failed", error="HTTP 403")
+            if f.source == CNN.name
+            else FeedOutcome(f, "ok", landed=50)
+            for f in ALL_FEEDS
+        ]
+        assert report(outcomes).healthy is False
+
+    def test_a_stale_declaration_is_surfaced(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # CNN starts working again. The exception should be removed, and nobody
+        # will notice unless the run says so — an exception nobody revisits is
+        # how a temporary workaround becomes permanent.
+        monkeypatch.setattr(settings, "expect_unreachable", "cnn")
+        rep = report(all_ok())
+        assert rep.unexpectedly_reachable == {CNN.name}
+        assert "declaration is stale" in rep.summary()
 
 
 class TestPerSourceTally:

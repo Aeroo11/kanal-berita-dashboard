@@ -46,6 +46,29 @@ class Settings(BaseSettings):
     max_retries: int = 3
     backoff_base_s: float = 2.0
 
+    # ── Environment-specific expectations ────────────────────────────────
+    expect_unreachable: str = ""
+    """Comma-separated sources known to be unreachable from *this* environment.
+
+    Declared at the deployment boundary rather than in the source registry,
+    because reachability is a property of where the code runs, not of the
+    publisher. CNN and Tempo sit behind Cloudflare and answer 403 to GitHub's
+    datacentre IPs while accepting any request — even one with an empty
+    User-Agent — from an Indonesian address.
+
+    A source listed here is still polled and still reported; it just does not
+    make the cycle unhealthy. That distinction matters: a run left permanently
+    red for a known, understood, unfixable reason stops being a signal, and the
+    next real failure arrives to an audience that has learnt to ignore it.
+
+    Deliberately empty by default, so a local run treats a CNN failure as the
+    problem it would be there.
+    """
+
+    @property
+    def unreachable_sources(self) -> frozenset[str]:
+        return frozenset(s.strip() for s in self.expect_unreachable.split(",") if s.strip())
+
     # ── Landing zone ─────────────────────────────────────────────────────
     landing_lookback_days: int = 3
     """How many previous day-partitions to scan when deduplicating.
