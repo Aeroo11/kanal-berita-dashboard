@@ -64,14 +64,45 @@ jobs:
 
       - name: Poll every feed
         id: poll
+        # Let a partial cycle reach the steps that record and commit it. The job
+        # is failed explicitly at the end instead, so the red signal survives
+        # without throwing away the diagnosis that explains it.
+        continue-on-error: true
         run: |
           # pipefail is not optional here. Without it bash reports the exit
           # status of `tee`, which always succeeds, so a cycle that lost an
           # entire publisher would still be reported as green. That is exactly
-          # what happened on the first run: CNN returned nothing, `kanal ingest`
+          # what happened on the first runs: CNN returned nothing, `kanal ingest`
           # exited 1 as designed, and the pipe swallowed it.
           set -o pipefail
-          uv run kanal ingest | tee cycle.log
+          uv run kanal ingest 2>&1 | tee cycle.log
+
+      # Written into the data branch, not only into the job summary.
+      #
+      # Workflow logs need a signed-in session to read and expire on their own
+      # schedule, which meant the one question that mattered — *why* does CNN
+      # return nothing from a runner — was unanswerable from outside GitHub's UI.
+      # A pipeline that cannot explain its own failures to someone holding a git
+      # clone is missing a piece.
+      - name: Record the cycle on the data branch
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p data/logs
+          stamp=$(date -u '+%Y-%m-%dT%H%M%SZ')
+          cp cycle.log "data/logs/cycle-${stamp}.log" 2>/dev/null || true
+          # A rolling tail, so the recent history is one file to read rather than
+          # a directory to sift.
+          {
+            echo "=== ${stamp} ==="
+            cat cycle.log 2>/dev/null || echo "(cycle produced no output)"
+            echo
+          } >> data/logs/recent.log
+          # Keep the tail bounded; the per-cycle files hold the full record.
+          tail -n 400 data/logs/recent.log > data/logs/recent.log.tmp
+          mv data/logs/recent.log.tmp data/logs/recent.log
+          # And prune the per-cycle files to the last few days.
+          ls -1t data/logs/cycle-*.log 2>/dev/null | tail -n +73 | xargs -r rm -f
 
       - name: Summarise the cycle
         if: always()
@@ -104,3 +135,14 @@ jobs:
             | grep -o '"article_key": *"[^"]*"' | sort -u | wc -l || echo 0)
           git commit -m "ingest $(date -u '+%Y-%m-%d %H:%M') UTC — ${articles} articles (${lines} lines)"
           git push origin HEAD:data
+
+      # The last word on whether this cycle was acceptable. `kanal ingest` exits
+      # non-zero when a whole publisher produced nothing usable, and that has to
+      # end up as a red run — but only after the diagnosis has been recorded and
+      # the articles that *did* land have been committed. An hour of data is not
+      # worth discarding to make a status code arrive sooner.
+      - name: Fail the run if a publisher went dark
+        if: steps.poll.outcome == 'failure'
+        run: |
+          echo "::error::A publisher produced no usable response this cycle — see the summary above and data/logs/recent.log on the data branch."
+          exit 1
