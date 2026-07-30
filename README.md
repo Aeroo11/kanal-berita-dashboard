@@ -3,6 +3,10 @@
 Platform *model lifecycle* untuk klasifikasi berita Indonesia: **cari model
 terbaik, deploy, dan jaga supaya tetap jujur.**
 
+**Dataset:** [`aeroo11/kanal-berita`](https://huggingface.co/datasets/aeroo11/kanal-berita)
+— judul berita Indonesia berlabel section, dikumpulkan tiap jam, dengan rate
+kebocoran dan properti evergreen-nya dinyatakan sebagai angka terukur.
+
 > **Status: Stage 1 selesai** — ingestion, warehouse, dbt + data contracts,
 > orkestrasi, dan publikasi dataset. Tag: `stage-1`.
 > README ini hanya menjelaskan apa yang sudah benar-benar dibangun. Bagian baru
