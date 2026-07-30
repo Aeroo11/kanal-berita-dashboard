@@ -9,7 +9,7 @@ without bound and every downstream count would be wrong.
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -102,6 +102,82 @@ class TestIdempotency:
         result = land_articles(doubled, feed_id="antara:ekonomi", fetched_at=FETCHED, root=root)
         assert result.written == 2
         assert result.skipped_duplicates == 1
+
+
+class TestAcrossDayBoundaries:
+    """The bug that only appeared after midnight.
+
+    Partitions are per UTC day, and the first version of `existing_keys` read
+    only the current day's. Within a day it was correct; across one it was not —
+    every article still sitting in a feed looked unseen again, and the next
+    cycle re-landed all of them.
+
+    Measured on the real data after two days of hourly ingestion: 1,353 lines
+    for 824 distinct articles, 39.1% redundant, with 529 articles appearing in
+    more than one partition. The unit tests all passed throughout, because none
+    of them crossed a date.
+    """
+
+    def test_an_article_seen_yesterday_is_not_relanded_today(self, root: Path) -> None:
+        yesterday = FETCHED - timedelta(days=1)
+        land_articles(
+            [make_article(i) for i in range(5)],
+            feed_id="antara:ekonomi",
+            fetched_at=yesterday,
+            root=root,
+        )
+
+        # The same five are still in the feed the next day.
+        result = land_articles(
+            [make_article(i) for i in range(5)],
+            feed_id="antara:ekonomi",
+            fetched_at=FETCHED,
+            root=root,
+        )
+
+        assert result.written == 0
+        assert result.skipped_duplicates == 5
+        assert count_articles(root) == 5
+
+    def test_genuinely_new_articles_still_land_the_next_day(self, root: Path) -> None:
+        yesterday = FETCHED - timedelta(days=1)
+        land_articles(
+            [make_article(i) for i in range(5)],
+            feed_id="antara:ekonomi",
+            fetched_at=yesterday,
+            root=root,
+        )
+        result = land_articles(
+            [make_article(i) for i in range(3, 8)],
+            feed_id="antara:ekonomi",
+            fetched_at=FETCHED,
+            root=root,
+        )
+        assert result.written == 3
+        assert result.skipped_duplicates == 2
+
+    def test_the_lookback_window_is_bounded(self, root: Path) -> None:
+        # An article older than the window re-lands. That is the deliberate
+        # trade: ANTARA keeps evergreen explainers in its feeds for months, and
+        # scanning far enough back to catch those would mean scanning the whole
+        # history on every cycle. The warehouse anti-join makes the modelled
+        # data unaffected either way.
+        long_ago = FETCHED - timedelta(days=10)
+        land_articles([make_article(1)], feed_id="antara:ekonomi", fetched_at=long_ago, root=root)
+        result = land_articles(
+            [make_article(1)], feed_id="antara:ekonomi", fetched_at=FETCHED, root=root
+        )
+        assert result.written == 1
+
+    def test_lookback_is_configurable(self, root: Path) -> None:
+        old = FETCHED - timedelta(days=6)
+        land_articles([make_article(1)], feed_id="antara:ekonomi", fetched_at=old, root=root)
+
+        seen_narrow = existing_keys("antara", FETCHED, root, lookback_days=2)
+        seen_wide = existing_keys("antara", FETCHED, root, lookback_days=10)
+
+        assert "key0001" not in seen_narrow
+        assert "key0001" in seen_wide
 
 
 class TestIsolation:

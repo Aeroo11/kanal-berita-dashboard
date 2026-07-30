@@ -22,7 +22,7 @@ import json
 import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from kanal.config import settings
@@ -43,34 +43,54 @@ def partition_dir(source: str, day: datetime, root: Path | None = None) -> Path:
     return base / f"source={source}" / f"dt={day.astimezone(UTC).date().isoformat()}"
 
 
-def existing_keys(source: str, day: datetime, root: Path | None = None) -> set[str]:
-    """Every `article_key` already present in a partition.
+def existing_keys(
+    source: str,
+    day: datetime,
+    root: Path | None = None,
+    lookback_days: int | None = None,
+) -> set[str]:
+    """Every `article_key` already present in the recent partitions.
 
-    Reading the partition back is deliberate. The alternative — trusting an
+    Reading the partitions back is deliberate. The alternative — trusting an
     in-memory set carried across the run — breaks the moment the process
     restarts, which is exactly when idempotency matters.
+
+    **Why a lookback rather than just today.** The first version read only the
+    current day's partition, which was correct within a day and wrong across
+    one: at midnight UTC every article still sitting in a feed was no longer
+    "seen", so the next cycle re-landed all of them. Measured on the real data
+    after two days, 39.1% of lines were re-landings — 529 of 824 articles
+    appeared in more than one partition.
+
+    A feed is a sliding window of its last 25–100 items, so a window of a few
+    days covers everything a publisher is still advertising. ANTARA's evergreen
+    explainers sit in its feeds for months and will still re-land once per
+    lookback period; bounding that at a few times a year is the point, and the
+    warehouse anti-join means the modelled data is unaffected either way.
     """
-    directory = partition_dir(source, day, root)
-    if not directory.exists():
-        return set()
+    lookback = settings.landing_lookback_days if lookback_days is None else lookback_days
 
     keys: set[str] = set()
-    for file in directory.glob("*.jsonl"):
-        try:
-            with file.open("r", encoding="utf-8") as fh:
-                for line in fh:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        keys.add(json.loads(line)["article_key"])
-                    except (json.JSONDecodeError, KeyError):
-                        # A partially written final line from a killed process.
-                        # Skipping it means we may re-write that one article;
-                        # far better than aborting the read.
-                        continue
-        except OSError as exc:
-            log.warning("could not read %s: %s", file, exc)
+    for offset in range(lookback + 1):
+        directory = partition_dir(source, day - timedelta(days=offset), root)
+        if not directory.exists():
+            continue
+        for file in directory.glob("*.jsonl"):
+            try:
+                with file.open("r", encoding="utf-8") as fh:
+                    for line in fh:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            keys.add(json.loads(line)["article_key"])
+                        except (json.JSONDecodeError, KeyError):
+                            # A partially written final line from a killed
+                            # process. Skipping it means we may re-write that one
+                            # article; far better than aborting the read.
+                            continue
+            except OSError as exc:
+                log.warning("could not read %s: %s", file, exc)
     return keys
 
 

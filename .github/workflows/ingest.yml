@@ -95,6 +95,12 @@ jobs:
             echo "nothing new this cycle"
             exit 0
           fi
-          rows=$(find raw -name '*.jsonl' -exec cat {} + 2>/dev/null | wc -l || echo 0)
-          git commit -m "ingest $(date -u '+%Y-%m-%d %H:%M') UTC — ${rows} rows total"
+          # Distinct articles, not raw lines. Counting lines overstated the
+          # dataset by 39% while articles were being re-landed across day
+          # partitions, and a commit log that inflates its own numbers is worse
+          # than one that omits them.
+          lines=$(find raw -name '*.jsonl' -exec cat {} + 2>/dev/null | wc -l || echo 0)
+          articles=$(find raw -name '*.jsonl' -exec cat {} + 2>/dev/null \
+            | grep -o '"article_key": *"[^"]*"' | sort -u | wc -l || echo 0)
+          git commit -m "ingest $(date -u '+%Y-%m-%d %H:%M') UTC — ${articles} articles (${lines} lines)"
           git push origin HEAD:data
