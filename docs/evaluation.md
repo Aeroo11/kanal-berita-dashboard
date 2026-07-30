@@ -120,6 +120,41 @@ Because ANTARA is nearly clean and the others are not, the cost of leakage can b
 
 That gap is the headline finding this dataset makes possible.
 
+> #### Correction, 2026-07-30 — this experiment does not measure what it claims
+>
+> Run for the first time, it produced a gap of **+0.29 macro-F1**. Two controls
+> reduced it to nothing worth reporting.
+>
+> **The first confound was training-set size.** The clean subset holds 156 rows
+> against 905 for the full pool. Holding *n* fixed at 156 and drawing ten
+> size-matched samples from the full pool cut the gap from +0.29 to **+0.14** —
+> the naive comparison overstated it by more than double.
+>
+> **The second confound removes the finding entirely.** The composition of the
+> clean subset is:
+>
+> | | ANTARA | CNN | Liputan6 | Republika |
+> |---|---|---|---|---|
+> | clean training set | **84.6%** | **0%** | 0.6% | 14.7% |
+> | test set | 15.2% | **59.1%** | 22.7% | 3.0% |
+>
+> CNN contributes **zero** rows to the clean subset, because CNN leaks its label
+> 100% of the time. So "train on clean rows" means "train almost entirely on
+> ANTARA", and the test set is 59% a publisher the model has never seen a single
+> example of. The remaining +0.14 is a **publisher shift**, not a leakage effect.
+>
+> **Leakage rate and publisher identity are very nearly the same variable in this
+> corpus**, so this experiment cannot separate them — not with more data, and not
+> with a better model. That is a property of the data supply, not of the sample.
+>
+> The experiment that *can* work is a within-publisher one, on the only source
+> with a genuine mix: Republika, at 36% leaky. It is small, and it will stay
+> provisional for a while. It is also the only version of this that would mean
+> anything.
+>
+> The original design is left above rather than deleted, because a protocol that
+> quietly edits away its own mistakes is not a protocol.
+
 ---
 
 ## What counts as a win

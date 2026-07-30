@@ -27,6 +27,10 @@ dependencies = [
     # because the algorithm is the demonstration; hand-writing a dot product is
     # not.
     "numpy>=2.0",
+    # TF-IDF and LinearSVC. The classifier is not what this project is
+    # demonstrating — the harness around it is — so the standard implementation
+    # is the right call here, unlike MinHash or the significance tests.
+    "scikit-learn>=1.6",
 ]
 
 [dependency-groups]
@@ -84,6 +88,21 @@ files = ["src/kanal"]
 [[tool.mypy.overrides]]
 module = "feedparser.*"
 ignore_missing_imports = true
+
+# scikit-learn ships no py.typed marker.
+#
+# The suppression sits on the *importing* module rather than on `sklearn.*`,
+# because that is where mypy reports import-untyped — and putting it here keeps
+# the exemption to the single file that touches sklearn instead of granting it
+# repository-wide.
+#
+# The boundary is narrow by design: tfidf.py converts everything crossing back
+# out into np.ndarray and then into the Prediction dataclass, so untyped values
+# never reach the evaluation code, which is where a wrong type would produce a
+# wrong number rather than a crash.
+[[tool.mypy.overrides]]
+module = "kanal.models.tfidf"
+disable_error_code = ["import-untyped"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
