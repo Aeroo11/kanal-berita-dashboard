@@ -85,6 +85,17 @@ jobs:
       # nodes exist, nothing connects them, every asset materialises and every
       # check passes, and the one reason Dagster is here — tracing a number in a
       # mart back to the feed it came from — quietly stops working.
+      # dagster-dbt enumerates its assets from the dbt manifest, and
+      # `prepare_if_dev()` only builds one when Dagster is running in dev mode.
+      # In CI it is not, so the manifest would be missing and the code location
+      # would fail to load for a reason that looks nothing like the cause.
+      # Building it explicitly here is also honest about the dependency.
+      - name: Generate the dbt manifest
+        working-directory: dbt
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+        run: uv run dbt parse
+
       - name: Validate the Dagster code location
         env:
           DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
