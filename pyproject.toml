@@ -3,7 +3,11 @@ name = "kanal"
 version = "0.1.0"
 description = "A model-lifecycle platform for Indonesian news classification: find the best model, deploy it, keep it honest."
 readme = "README.md"
-requires-python = ">=3.11"
+# 3.12, matching what every CI workflow already pins and what the lockfile
+# resolves to. The declaration said 3.11 while nothing ran on it, which meant
+# mypy was type-checking against a version the project never used — and numpy
+# 2.x stubs, which use `type` statements, fail to parse under it.
+requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Efan Ramdhani" }]
 
@@ -17,6 +21,12 @@ dependencies = [
     # Warehouse
     "duckdb>=1.1",
     "huggingface-hub>=0.27",
+    # Evaluation. numpy is for the array arithmetic only — the statistics
+    # themselves (macro-F1, ECE, paired bootstrap, McNemar) are written out in
+    # kanal.eval, for the reason in ADR-002. Hand-writing MinHash was defensible
+    # because the algorithm is the demonstration; hand-writing a dot product is
+    # not.
+    "numpy>=2.0",
 ]
 
 [dependency-groups]
@@ -63,7 +73,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 allowed-confusables = ["–", "—"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = true
 files = ["src/kanal"]
 
