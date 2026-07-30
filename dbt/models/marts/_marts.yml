@@ -41,7 +41,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: [antara, cnn, liputan6]
+                values: [antara, cnn, liputan6, republika]
 
       - name: cluster_size
         tests:
@@ -104,3 +104,23 @@ models:
       - unique_combination:
           arguments:
             columns: [source, ingest_date]
+
+  - name: mart_feed_health
+    description: >
+      Per-feed health, at channel granularity. mart_source_health answers "is
+      this publisher responding?"; it cannot answer "is this channel still being
+      published?". Republika's /rss/kesehatan returns HTTP 200 with fifteen
+      well-formed items whose newest is from 2011 — a failure with no symptom
+      other than the dates.
+    columns:
+      - name: feed_id
+        tests: [unique, not_null]
+      - name: articles
+        tests:
+          - accepted_range:
+              arguments:
+                min_value: 1
+      - name: looks_dormant
+        tests: [not_null]
+      - name: looks_abandoned
+        tests: [not_null]

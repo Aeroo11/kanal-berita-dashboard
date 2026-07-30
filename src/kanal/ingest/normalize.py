@@ -119,6 +119,11 @@ _BOILERPLATE = (
     re.compile(r"^TEMPO\.CO,\s*[^-–—]{0,40}[-–—]\s*", re.IGNORECASE),
     re.compile(r"^detik\w*\s*[-–—]\s*", re.IGNORECASE),
     re.compile(r"^ANTARA\s*[-–—]\s*", re.IGNORECASE),
+    # Republika: "REPUBLIKA.CO.ID, JAKARTA -- " and "REPUBLIKA.CO.ID, GIANYAR, – ".
+    # The city varies and sometimes carries a trailing comma; the dash may be
+    # doubled. Arrives as &nbsp; and &ndash; entities, already decoded and
+    # whitespace-normalised by the time this runs.
+    re.compile(r"^REPUBLIKA\.CO\.ID,\s*[^-–—]{0,40}[-–—]+\s*", re.IGNORECASE),
     re.compile(r"^Jakarta\s*[-–—]\s*", re.IGNORECASE),
 )
 

@@ -111,8 +111,19 @@ ANTARA = Source(
                 "matrix shows it bleeding into politik."
             ),
         ),
-        Feed(_ANTARA, "sepakbola", "https://www.antaranews.com/rss/sepakbola.xml", Kanal.OLAHRAGA),
-        Feed(_ANTARA, "olahraga", "https://www.antaranews.com/rss/olahraga.xml", Kanal.OLAHRAGA),
+        Feed(
+            _ANTARA,
+            "sepakbola",
+            "https://www.antaranews.com/rss/sepakbola.xml",
+            Kanal.OLAHRAGA,
+            notes=(
+                "ANTARA's only live sport feed. Its /rss/olahraga.xml was in this "
+                "registry until the feed-health contract measured it: 100% "
+                "evergreen with a freshest item 198 days old, so abandoned "
+                "rather than quiet — and redundant, since this feed covers the "
+                "same class and is current. Removed on that evidence."
+            ),
+        ),
         Feed(_ANTARA, "tekno", "https://www.antaranews.com/rss/tekno.xml", Kanal.TEKNOLOGI),
         Feed(_ANTARA, "hiburan", "https://www.antaranews.com/rss/hiburan.xml", Kanal.HIBURAN),
         Feed(
@@ -226,7 +237,75 @@ LIPUTAN6 = Source(
     ),
 )
 
-SOURCES: tuple[Source, ...] = (ANTARA, CNN, LIPUTAN6)
+# ── Republika ────────────────────────────────────────────────────────────
+# Added to recover a third editorial perspective after CNN turned out to be
+# unreachable from CI: CNN and Tempo sit behind Cloudflare and answer 403 to
+# datacentre IPs, while ANTARA, Liputan6 and Republika do not.
+#
+# Republika's RSS estate is *mostly abandoned*, and surveying it before adding
+# anything was the difference between a third source and a poisoned dataset.
+# Of 21 section feeds probed:
+#
+#   live (newest item < 48h)  nasional, ekonomi, internasional, khazanah,
+#                             otomotif, pendidikan
+#   stale by years            kesehatan (15.4y), leisure (8.5y), olahraga (3.9y),
+#                             teknologi (3.9y), sepakbola (3.5y), trendtek (3.5y),
+#                             dunia-islam (3.5y), jurnalisme-warga (4.2y),
+#                             hiburan (1.2y)
+#   empty                     bola, islam, gayahidup, sepak-bola, amp
+#
+# `/rss/kesehatan` is the trap: it maps *cleanly* onto gaya-hidup-kesehatan and
+# would have flooded the store with articles from 2011. This is a different risk
+# class from ANTARA's evergreen mixing — a wholly abandoned feed, not a live one
+# carrying old items — and it is why `mart_feed_health` and the staleness
+# contract now exist.
+_REPUBLIKA = "republika"
+REPUBLIKA = Source(
+    name=_REPUBLIKA,
+    homepage="https://republika.co.id",
+    # Sections live on subdomains rather than path segments, so the leak is
+    # partial: ekonomi.republika.co.id gives its section away, while both
+    # nasional and internasional are served from news.republika.co.id and do not.
+    section_in_url=True,
+    item_level_category=True,
+    notes=(
+        "Islamic-leaning national daily. Prefixes summaries with "
+        "'REPUBLIKA.CO.ID, <CITY> -- ' using HTML entities (&nbsp;, &ndash;). "
+        "Only the three feeds below are both actively maintained and cleanly "
+        "mappable onto the canonical taxonomy — khazanah (Islamic affairs), "
+        "pendidikan and otomotif are live but have no honest home among eight "
+        "classes, and forcing them in would be label noise by construction."
+    ),
+    feeds=(
+        Feed(
+            _REPUBLIKA,
+            "nasional",
+            "https://republika.co.id/rss/nasional",
+            Kanal.POLITIK,
+            notes=(
+                "Same judgement call as CNN's 'nasional': predominantly domestic "
+                "politics and government, with some crime bleeding in. Served "
+                "from news.republika.co.id, so the URL does not leak the section."
+            ),
+        ),
+        Feed(
+            _REPUBLIKA,
+            "ekonomi",
+            "https://republika.co.id/rss/ekonomi",
+            Kanal.EKONOMI,
+            notes="Served from ekonomi.republika.co.id — the subdomain leaks the section.",
+        ),
+        Feed(
+            _REPUBLIKA,
+            "internasional",
+            "https://republika.co.id/rss/internasional",
+            Kanal.INTERNASIONAL,
+            notes="Served from news.republika.co.id, so the URL does not leak the section.",
+        ),
+    ),
+)
+
+SOURCES: tuple[Source, ...] = (ANTARA, CNN, LIPUTAN6, REPUBLIKA)
 
 ALL_FEEDS: tuple[Feed, ...] = tuple(f for s in SOURCES for f in s.feeds)
 

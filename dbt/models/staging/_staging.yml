@@ -71,7 +71,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: [antara, cnn, liputan6]
+                values: [antara, cnn, liputan6, republika]
 
       - name: title_words
         description: >

@@ -3,8 +3,7 @@ antara,politik,politik,high,Direct match. ANTARA separates politik from hukum cl
 antara,hukum,hukum-kriminal,high,Direct match.
 antara,ekonomi,ekonomi,high,Direct match.
 antara,metro,hukum-kriminal,low,"Judgement call. ANTARA 'metro' is Jakarta city news, dominated by crime and civic incidents. Mapped here rather than inventing a 'daerah' class. Revisit if the confusion matrix shows it bleeding into politik."
-antara,sepakbola,olahraga,high,Football is a subset of sport. ANTARA runs both feeds and they overlap heavily.
-antara,olahraga,olahraga,high,Direct match.
+antara,sepakbola,olahraga,high,"ANTARA's only live sport feed. Its /rss/olahraga.xml was dropped after the feed-health contract measured it at 100% evergreen with a freshest item 198 days old — abandoned rather than quiet, and redundant with this one."
 antara,tekno,teknologi,high,Direct match.
 antara,hiburan,hiburan,high,Direct match.
 antara,dunia,internasional,high,"ANTARA says 'dunia' where CNN says 'internasional'. Same class, different house style."
@@ -24,3 +23,6 @@ liputan6,showbiz,hiburan,high,Direct match.
 liputan6,global,internasional,high,Direct match.
 liputan6,health,gaya-hidup-kesehatan,medium,"Health is folded into the lifestyle class rather than given its own. Eight classes was the budget; a separate 'kesehatan' would be thin and would confuse with lifestyle constantly."
 liputan6,lifestyle,gaya-hidup-kesehatan,high,Direct match.
+republika,nasional,politik,medium,"Same judgement call as CNN's 'nasional' — predominantly domestic politics and government, with some crime bleeding in. Added to recover a third editorial perspective after CNN proved unreachable from CI."
+republika,ekonomi,ekonomi,high,Direct match. Served from ekonomi.republika.co.id so the URL leaks the section.
+republika,internasional,internasional,high,"Direct match. Served from news.republika.co.id, so unlike its ekonomi feed the URL does not leak the section."

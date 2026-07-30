@@ -64,14 +64,43 @@ lalu menyebut dirinya MLOps.
 
 ### Sumber
 
-| Penerbit | Feed | Section di URL artikel | `<category>` per item |
-|---|---|---|---|
-| **ANTARA** (kantor berita negara) | 11 | tidak | tidak |
-| **CNN Indonesia** | 7 | **ya** | tidak |
-| **Liputan6** | 7 | **ya** | **ya** |
+| Penerbit | Feed | Section di URL artikel | `<category>` per item | Dari CI |
+|---|---|---|---|---|
+| **ANTARA** (kantor berita negara) | 10 | tidak | tidak | ✓ |
+| **Liputan6** | 7 | **ya** | **ya** | ✓ |
+| **Republika** | 3 | sebagian (subdomain) | **ya** | ✓ |
+| **CNN Indonesia** | 7 | **ya** | tidak | ✗ **403** |
 
 Perbedaan itu bukan gangguan — itu justru eksperimennya. Lihat *Kebocoran
 label*.
+
+### CNN diblokir dari CI, dan polanya prediktif
+
+CNN mengembalikan **HTTP 403 di ketujuh feed** dari runner GitHub. Dari alamat
+Indonesia, CNN melayani 100 item ke **request apa pun** — termasuk yang
+`User-Agent`-nya kosong. Jadi blokirnya berdasarkan **asal koneksi**, bukan
+identitas.
+
+Dan ini bukan kebetulan. Setelah memeriksa edge yang melayani tiap kandidat
+penerbit: dua sumber yang jalan dari CI adalah tepat dua yang **tidak** di
+belakang Cloudflare. CNN dan Tempo keduanya Cloudflare, keduanya 403.
+
+`KANAL_EXPECT_UNREACHABLE` mendeklarasikan pengecualian ini di **batas
+deployment**, bukan di registry sumber — karena *reachability* adalah properti
+tempat kode berjalan, bukan properti penerbitnya. Lokal tidak menyetelnya, jadi
+CNN gagal di laptop tetap merah.
+
+Tiga hal menjaga ini agar tidak jadi cara menyembunyikan kegagalan: sumbernya
+tetap di-polling dan tetap dilaporkan beserta status code aslinya; sumber yang
+**tidak** dideklarasikan tetap menggagalkan siklus; dan kalau sumber yang
+dideklarasikan mulai menjawab, laporannya bilang **deklarasinya sudah usang dan
+bisa dihapus**. Pengecualian yang tidak pernah ditinjau ulang adalah cara sebuah
+*workaround* sementara jadi permanen.
+
+Republika ditambahkan untuk memulihkan perspektif redaksi ketiga. Efek
+sampingnya lebih baik dari perkiraan: `republika:internasional` **0% bocor** dan
+`republika:nasional` **7%**, jadi kelompok kontrol tidak lagi bergantung pada
+ANTARA sendirian.
 
 ---
 
@@ -231,6 +260,31 @@ Dua properti yang wajib dimilikinya, keduanya di-test:
 - **Incremental** — file yang sudah tercatat di `_load_log` tidak dibuka lagi,
   sehingga proses load tetap murah saat landing zone tumbuh melewati ratusan
   ribu baris.
+
+### Feed yang terbengkalai: HTTP 200 tanpa satu pun gejala
+
+Ini kelas risiko yang saya temukan saat menyurvei Republika sebelum
+menambahkannya — dan yang paling mahal kalau terlewat.
+
+Dari 21 section feed Republika yang saya periksa, **sembilan basi bertahun-tahun**
+dan `/rss/kesehatan` masih menyajikan artikel dari **2011**. Tidak ada satu pun
+gejala: fetch-nya sukses, parse-nya sukses, skemanya valid, 15 item lengkap
+dengan tanggal yang benar, dan *freshness check* per-sumber lolos karena feed
+lain dari penerbit yang sama sehat.
+
+Yang membuatnya berbahaya, bukan cuma tidak berguna: `/rss/kesehatan` memetakan
+**bersih** ke `gaya-hidup-kesehatan` di taksonomi. Tanpa survei, feed itu akan
+masuk tanpa keraguan dan mengisi store dengan teks berumur 15 tahun.
+
+Ini berbeda dari masalah evergreen ANTARA. Di sana, feed hidup membawa sebagian
+item lama. Di sini, feed-nya berhenti dipelihara sama sekali dan tidak ada apa
+pun di responsnya yang menyatakan itu.
+
+`mart_feed_health` mengukurnya per feed, dan kontraknya langsung membayar dirinya
+sendiri pada build pertama: ia menandai **`antara:olahraga`** — 100% evergreen,
+item terbaru **198 hari**. Bukan feed sepi, tapi feed mati; dan redundan, karena
+`antara:sepakbola` mencakup kelas yang sama dan masih terkini. Feed itu dihapus
+atas dasar bukti tersebut, bukan atas dugaan.
 
 ### Data contract: yang dipilih adalah yang gagal diam-diam
 

@@ -128,6 +128,12 @@ class TestCleanText:
             "KOMPAS.com - Isi berita.",
             "CNN Indonesia - Isi berita.",
             "TEMPO.CO, Jakarta - Isi berita.",
+            # Republika's real forms: the city varies, sometimes carries a
+            # trailing comma, and the dash may be doubled.
+            "REPUBLIKA.CO.ID, JAKARTA -- Isi berita.",
+            "REPUBLIKA.CO.ID, GIANYAR, – Isi berita.",
+            "REPUBLIKA.CO.ID, BANDUNG – Isi berita.",
+            "REPUBLIKA.CO.ID, SUKABUMI - Isi berita.",
         ],
     )
     def test_strips_publisher_boilerplate(self, raw: str) -> None:
@@ -153,6 +159,19 @@ class TestCleanText:
         # Order matters: the prefix is only recognisable once markup is gone.
         raw = '<img src="https://cdn.example.com/x.jpg"/>Liputan6.com, Jakarta - Isi.'
         assert clean_text(raw) == "Isi."
+
+    def test_strips_boilerplate_written_with_html_entities(self) -> None:
+        # Republika sends "REPUBLIKA.CO.ID,&nbsp;BANDUNG &ndash; ". The entities
+        # decode to a non-breaking space and an en dash, so the pattern only
+        # matches after strip_html and whitespace normalisation have run — which
+        # is the reason clean_text does them in that order.
+        raw = "REPUBLIKA.CO.ID,&nbsp;BANDUNG &ndash;&nbsp;Isi berita."
+        assert clean_text(raw) == "Isi berita."
+
+    def test_does_not_strip_a_publisher_name_mid_sentence(self) -> None:
+        # The patterns are anchored. A story *about* Republika keeps its text.
+        raw = "Menteri menyebut REPUBLIKA.CO.ID sebagai contoh media digital."
+        assert clean_text(raw) == raw
 
 
 class TestTitleFingerprint:
