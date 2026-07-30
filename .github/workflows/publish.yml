@@ -1,0 +1,98 @@
+name: publish dataset
+
+# Manual and daily, not hourly. The dataset is a *snapshot* of an
+# always-growing store; republishing it every hour would bury the useful
+# history under commits that change a few dozen rows.
+on:
+  schedule:
+    - cron: "40 3 * * *" # after the day's ingestion has settled
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build the export and card, but do not push"
+        type: boolean
+        default: false
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The dataset is built from everything collected so far, so the full data
+      # branch is needed rather than a shallow copy.
+      - name: Fetch the landing zone
+        run: |
+          set -euo pipefail
+          if ! git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+            echo "::error::no data branch yet — nothing to publish"
+            exit 1
+          fi
+          git fetch origin data
+          git worktree add data origin/data
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv sync --frozen
+
+      # Rebuild the warehouse and models from the raw layer rather than trusting
+      # any cached artefact. The published dataset must be reproducible from the
+      # landing zone alone.
+      - name: Build the warehouse
+        run: uv run kanal load
+
+      - name: Build the models and run every contract
+        working-directory: dbt
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+        run: |
+          set -o pipefail
+          uv run dbt build --no-partial-parse
+
+      - name: Export the dataset and generate the card
+        run: |
+          set -o pipefail
+          uv run kanal export | tee export.log
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo '### Dataset export'
+            echo '```'
+            cat export.log 2>/dev/null || echo "(export produced no output)"
+            echo '```'
+            echo '### Stats'
+            echo '```json'
+            cat data/export/stats.json 2>/dev/null || echo '{}'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Push to Hugging Face
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          # A write-scoped token, added as a repository secret. The uploader
+          # reads it from the environment only — never a flag — so it cannot end
+          # up in a log line or a shell history.
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          KANAL_HF_REPO: ${{ vars.KANAL_HF_REPO || 'aeroo11/kanal-berita' }}
+        run: uv run kanal publish
+
+      - name: Dry run instead
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: uv run kanal publish --dry-run

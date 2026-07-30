@@ -16,6 +16,7 @@ dependencies = [
     "pydantic-settings>=2.7",
     # Warehouse
     "duckdb>=1.1",
+    "huggingface-hub>=0.27",
 ]
 
 [dependency-groups]

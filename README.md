@@ -3,7 +3,8 @@
 Platform *model lifecycle* untuk klasifikasi berita Indonesia: **cari model
 terbaik, deploy, dan jaga supaya tetap jujur.**
 
-> **Status: Stage 1 berjalan — ingestion, warehouse, dan dbt.**
+> **Status: Stage 1 selesai** — ingestion, warehouse, dbt + data contracts,
+> orkestrasi, dan publikasi dataset. Tag: `stage-1`.
 > README ini hanya menjelaskan apa yang sudah benar-benar dibangun. Bagian baru
 > ditambahkan setelah kodenya ada, bukan sebelumnya.
 
@@ -26,6 +27,9 @@ cd dbt && DBT_PROFILES_DIR=. uv run dbt build
 # Atau lewat orchestrator, dengan lineage graph yang bisa diklik
 export DBT_PROFILES_DIR=$PWD/dbt
 uv run dagster dev -m kanal.orchestration.definitions
+
+uv run kanal export      # → Parquet + dataset card ber-angka nyata
+uv run kanal publish --dry-run
 ```
 
 Siklus kedua yang mendaratkan **nol baris** itu bukan kebetulan — lihat bagian
@@ -471,14 +475,36 @@ CI menjalankan ruff, ruff format, mypy `--strict`, dan pytest pada tiap push.
 
 ---
 
+### Dataset card yang di-generate, bukan ditulis
+
+Angka di dalam card **wajib** cocok dengan Parquet di sebelahnya. Card yang
+mengklaim 1.295 artikel di samping file berisi 824 lebih buruk daripada card
+tanpa angka sama sekali — dan angka yang dipelihara manual akan melenceng begitu
+ingestion jalan lagi.
+
+Jadi prosanya tetap, setiap angkanya dibaca dari hasil ekspor: distribusi label,
+rate kebocoran per sumber, rate evergreen, dan jumlah baris bersih. Test-nya
+mengunci kopling itu, termasuk **urutannya** — peringatan kebocoran harus muncul
+sebelum tabel distribusi, karena orang yang cuma membaca satu layar pertama tetap
+harus tahu bahwa URL-nya racun.
+
+Yang dipublikasikan adalah `fct_articles`, **bukan** landing zone. Layer raw itu
+setia pada apa yang tiap polling kembalikan — termasuk redundansi lintas partisi —
+sementara fact table adalah versi ter-dedup, ter-tipe, dan sudah lewat contract.
+Mempublikasikan layer raw berarti menyerahkan redundansinya tanpa jaminannya.
+
+Kolom provenance (`canonical_url`, `source`, `channel`) **ikut** dipublikasikan
+walau model tidak boleh melihatnya — karena tanpa itu, orang lain tidak bisa
+**mereproduksi** pengukuran kebocorannya dan hanya bisa mempercayai klaim saya.
+
 ## Belum dibangun
 
 Disebutkan di sini supaya cakupannya terbaca jelas, dan supaya README ini tidak
 bisa disalahartikan sebagai deskripsi sistem yang sudah jadi:
 
-publikasi dataset ke Hugging Face · *near-duplicate clustering* dengan MinHash ·
-empat kandidat model · *evaluation harness* · *promotion gate* · serving ·
-*confidence cascade* · deteksi drift · dashboard.
+*near-duplicate clustering* dengan MinHash · empat kandidat model ·
+*evaluation harness* · *promotion gate* · serving · *confidence cascade* ·
+deteksi drift · dashboard.
 
 Satu hal yang **diketahui belum beres**: CNN tidak menghasilkan apa pun saat
 ingestion berjalan dari runner GitHub, padahal normal dari mesin lokal. Siklus

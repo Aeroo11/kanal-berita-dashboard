@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-07-30T11:57:46.220762+00:00",
+  "articles": 1295,
+  "sources": 4,
+  "kanal_classes": 8,
+  "published_range": {
+    "oldest": "2025-09-30 09:21:14",
+    "newest": "2026-07-30 11:55:49"
+  },
+  "articles_by_kanal": {
+    "gaya-hidup-kesehatan": 240,
+    "ekonomi": 185,
+    "internasional": 185,
+    "olahraga": 170,
+    "hiburan": 170,
+    "teknologi": 170,
+    "politik": 135,
+    "hukum-kriminal": 40
+  },
+  "articles_by_source": {
+    "antara": 200,
+    "cnn": 700,
+    "liputan6": 350,
+    "republika": 45
+  },
+  "rows_without_url_leak": 229,
+  "distinct_stories": 1295,
+  "url_leak_rate_by_source": {
+    "antara": 0.025,
+    "cnn": 1.0,
+    "liputan6": 0.9857,
+    "republika": 0.3556
+  },
+  "evergreen_rate_by_source": {
+    "antara": 0.59,
+    "cnn": 0.0,
+    "liputan6": 0.1143,
+    "republika": 0.0
+  }
+}
