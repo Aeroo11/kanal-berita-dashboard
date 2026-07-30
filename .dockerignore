@@ -1,0 +1,22 @@
+# Keep the serving image to what it needs to serve.
+.git
+.github
+.venv
+.ruff_cache
+.pytest_cache
+.mypy_cache
+__pycache__
+*.pyc
+
+# The warehouse, the landing zone and the exported dataset are all inputs to
+# training, not to serving. Shipping them would multiply the image size for
+# files the API never opens.
+data/raw
+data/warehouse
+data/export
+dbt/target
+dbt/logs
+
+tests
+docs
+scripts

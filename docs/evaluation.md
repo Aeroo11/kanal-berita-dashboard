@@ -216,6 +216,24 @@ responses is the standard way an LLM baseline gets flattered.
 **Latency is measured, not estimated**, warm, at batch size 1, on the same
 machine as the other candidates.
 
+### The cost gate has two limbs, and the first was missing
+
+> Added 2026-07-31, after an end-to-end run.
+
+Promotion passes the cost condition if the challenger is **either** within an
+absolute budget of **USD 0.10 per 1,000 predictions**, **or** within 20% of what
+the champion costs.
+
+The tolerance limb alone was implemented first, and it was unusable. The majority
+baseline costs about 8×10⁻¹² USD per thousand, so 120% of it still rounds to
+nothing — and the gate refused a challenger that was **+0.69 macro-F1 better**,
+with a bootstrap CI lower bound of +0.64 and McNemar at p = 7×10⁻²⁹. A baseline
+that does no work would have blocked every real model forever.
+
+The budget is a **policy number, not a derived one**: it is what a prediction is
+worth to the product, and it is the figure the Stage 4 cascade has to tune
+against. Stating it here rather than choosing it later is the point.
+
 ---
 
 ## The candidates

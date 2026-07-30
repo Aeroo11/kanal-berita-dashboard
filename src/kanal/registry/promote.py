@@ -30,7 +30,19 @@ MAX_P95_MS = 300.0
 MAX_CLASS_REGRESSION = 0.05
 MIN_TEST_ROWS = 150
 COOLDOWN_HOURS = 72
-COST_TOLERANCE = 1.20  # a challenger may cost up to 20% more than the champion
+
+# G6 has two limbs, and the first one was missing until an end-to-end run caught
+# it. A tolerance alone is unusable when the incumbent is free: the majority
+# baseline costs about 8e-12 USD per thousand, and 120% of that still rounds to
+# nothing, so the gate refused a challenger that was 0.69 macro-F1 better with
+# both significance tests passing. Any real model would have been blocked
+# forever.
+#
+# So: within an absolute budget, OR within tolerance of the champion. The budget
+# is a policy number rather than a derived one — it is what a prediction is worth
+# to the product, and it is the figure the Stage 4 cascade tunes against.
+MAX_USD_PER_1000 = 0.10
+COST_TOLERANCE = 1.20  # or up to 20% more than the champion, whichever helps
 
 
 class Verdict(StrEnum):
@@ -201,16 +213,23 @@ def evaluate_gate(
     else:
         passed.append("G4 no-regress: no class lost more than 0.05 F1")
 
-    # G6 — cost. Within budget, or within tolerance of the champion.
-    ceiling = incumbent.usd_per_1000 * COST_TOLERANCE
-    if challenger.usd_per_1000 > ceiling:
-        reasons.append(
-            f"G6 cost: ${challenger.usd_per_1000:.6f}/1k exceeds "
-            f"${ceiling:.6f}/1k, which is {COST_TOLERANCE:.0%} of the champion's "
-            f"${incumbent.usd_per_1000:.6f}/1k"
-        )
+    # G6 — cost. Within the absolute budget, OR within tolerance of the champion.
+    # Either limb suffices, and the first one is what makes the gate usable when
+    # the incumbent is a free baseline.
+    tolerance_ceiling = incumbent.usd_per_1000 * COST_TOLERANCE
+    within_budget = challenger.usd_per_1000 <= MAX_USD_PER_1000
+    within_tolerance = challenger.usd_per_1000 <= tolerance_ceiling
+
+    if within_budget or within_tolerance:
+        limb = "within budget" if within_budget else "within tolerance of the champion"
+        passed.append(f"G6 cost: ${challenger.usd_per_1000:.6f}/1k, {limb}")
     else:
-        passed.append(f"G6 cost: ${challenger.usd_per_1000:.6f}/1k")
+        reasons.append(
+            f"G6 cost: ${challenger.usd_per_1000:.6f}/1k is over both limbs — "
+            f"above the ${MAX_USD_PER_1000:.4f}/1k budget, and above the "
+            f"${tolerance_ceiling:.6f}/1k that is {COST_TOLERANCE:.0%} of the "
+            f"champion's ${incumbent.usd_per_1000:.6f}/1k"
+        )
 
     # G8 — cooldown, waived when the champion is violating its own SLO. Promoting
     # repeatedly on noise is how a registry fills with churn; refusing to promote

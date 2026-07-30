@@ -27,6 +27,8 @@ no — which is either untrue or much worse than it sounds.
 from __future__ import annotations
 
 import json
+import os
+import threading
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -89,16 +91,31 @@ class Registry:
         return target
 
     def set_alias(self, alias: str, artifact_id: str) -> None:
+        """Point an alias at an artifact, atomically.
+
+        Written to a temporary file and renamed rather than written in place.
+        `write_text` truncates before writing, so a serving process polling the
+        alias at that instant reads an empty file — and a promotion would
+        intermittently break the reader it exists to notify.
+
+        `os.replace` is atomic on POSIX and on Windows, so a reader sees the old
+        contents or the new ones and never a partial write. Found by a
+        concurrency test that promoted in a loop while four threads served.
+        """
         if not (self.artifacts / artifact_id).exists():
             raise FileNotFoundError(f"no artifact {artifact_id} in the registry")
         self.aliases.mkdir(parents=True, exist_ok=True)
-        self._alias_file(alias).write_text(
-            json.dumps(
-                {"artifact_id": artifact_id, "set_at": datetime.now(tz=UTC).isoformat()},
-                indent=2,
-            ),
-            encoding="utf-8",
+
+        payload = json.dumps(
+            {"artifact_id": artifact_id, "set_at": datetime.now(tz=UTC).isoformat()},
+            indent=2,
         )
+        target = self._alias_file(alias)
+        # Unique per writer, so two concurrent promotions cannot clobber each
+        # other's temporary file and rename a half-written one into place.
+        tmp = target.with_suffix(f".{os.getpid()}.{threading.get_ident()}.tmp")
+        tmp.write_text(payload, encoding="utf-8")
+        os.replace(tmp, target)
 
     def resolve(self, alias: str) -> str:
         path = self._alias_file(alias)

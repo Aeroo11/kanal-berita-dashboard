@@ -1,7 +1,13 @@
 """Command-line entry point.
 
-kanal ingest [--source antara] [--dry-run]
-kanal status
+kanal ingest [--source antara]     poll every feed once
+kanal load                         landing zone -> DuckDB
+kanal export / publish             build and push the dataset
+kanal status                       landing-zone and feed state
+
+kanal champion                     what is serving right now
+kanal rollback                     swap champion and previous
+kanal decisions                    the promotion log, refusals included
 """
 
 from __future__ import annotations
@@ -10,8 +16,12 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from kanal.config import settings
+
+if TYPE_CHECKING:
+    from kanal.registry.store import Registry
 from kanal.ingest.land import count_articles
 from kanal.ingest.run import run_cycle
 from kanal.ingest.sources import ALL_FEEDS, SOURCE_BY_NAME, feeds_for
@@ -104,6 +114,89 @@ def _cmd_status(_: argparse.Namespace) -> int:
     return 0
 
 
+def _registry(args: argparse.Namespace) -> Registry:
+    from kanal.registry.store import Registry
+
+    return Registry(Path(args.registry))
+
+
+def _cmd_champion(args: argparse.Namespace) -> int:
+    """What is serving right now — the first question during an incident."""
+    from kanal.registry.artifact import load
+    from kanal.registry.store import CHAMPION, PREVIOUS, AliasNotSet
+
+    registry = _registry(args)
+    try:
+        current = registry.resolve(CHAMPION)
+    except AliasNotSet:
+        print("champion : none — nothing has been promoted")
+        return 1
+
+    print(f"champion : {current}")
+    print(f"  set at : {registry.alias_set_at(CHAMPION)}")
+    try:
+        # Tolerates a feature mismatch, because an operator asking "what is
+        # serving" needs an answer even when the answer is "something this code
+        # can no longer load".
+        artifact = load(registry.artifacts / current, allow_feature_mismatch=True)
+        print(f"  model  : {artifact.meta.name}")
+        print(f"  split  : {artifact.meta.split_hash}")
+        print(f"  classes: {len(artifact.meta.classes)}")
+        for key, value in sorted(artifact.meta.metrics.items()):
+            print(f"  {key:<7}: {value}")
+    except Exception as err:
+        # Broad on purpose: "what is serving" must still answer when the answer
+        # is "an artifact this code cannot read".
+        print(f"  ! could not read its metadata: {err}")
+
+    try:
+        print(f"previous : {registry.resolve(PREVIOUS)}  (make rollback swaps to this)")
+    except AliasNotSet:
+        print("previous : none — there is nothing to roll back to")
+    return 0
+
+
+def _cmd_rollback(args: argparse.Namespace) -> int:
+    from kanal.registry.store import AliasNotSet
+
+    registry = _registry(args)
+    try:
+        restored = registry.rollback()
+    except AliasNotSet as err:
+        print(f"cannot roll back: {err}")
+        return 1
+
+    print(f"champion -> {restored}")
+    print("The API re-reads the alias on a timer; it will follow within 60s")
+    print("with no redeploy. Run `kanal rollback` again to undo this.")
+    return 0
+
+
+def _cmd_decisions(args: argparse.Namespace) -> int:
+    """The promotion log, refusals included.
+
+    Refusals are the entries worth reading: a log of nothing but successes is a
+    log of a gate that has never once said no.
+    """
+    registry = _registry(args)
+    decisions = registry.decisions()
+    if not decisions:
+        print("no promotion decisions recorded yet")
+        return 0
+
+    shown = decisions if args.all else decisions[-args.limit :]
+    for decision in shown:
+        print(decision.summary())
+
+    refused = len(registry.refusals())
+    print(f"\n{len(decisions)} decision(s), {refused} refused")
+    if refused == 0 and len(decisions) > 2:
+        print(
+            "! nothing has ever been refused — worth checking the gate is actually being consulted"
+        )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="kanal", description=__doc__)
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -159,6 +252,25 @@ def main(argv: list[str] | None = None) -> int:
 
     status = sub.add_parser("status", help="show landing-zone and feed-registry state")
     status.set_defaults(func=_cmd_status)
+
+    # Registry operations. `champion` and `rollback` are the two anyone reaches
+    # for during an incident, so they take no required arguments.
+    for name, help_text, handler in (
+        ("champion", "show what is serving right now", _cmd_champion),
+        ("rollback", "swap champion and previous; the API follows within 60s", _cmd_rollback),
+        ("decisions", "the promotion log, including refusals", _cmd_decisions),
+    ):
+        cmd = sub.add_parser(name, help=help_text)
+        cmd.add_argument(
+            "--registry",
+            type=Path,
+            default=Path("data/registry"),
+            help="registry root (default: data/registry)",
+        )
+        if name == "decisions":
+            cmd.add_argument("--limit", type=int, default=10, help="show the last N (default 10)")
+            cmd.add_argument("--all", action="store_true", help="show every decision")
+        cmd.set_defaults(func=handler)
 
     args = parser.parse_args(argv)
     _configure_logging(args.verbose)

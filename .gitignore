@@ -38,6 +38,13 @@ tmp*/
 # would mean a binary diff every day for a file nobody reads from git.
 /data/export/
 
+# Model artifacts. These are built from a split and a training run, not
+# authored, and they are pickles — committing them would put opaque binaries in
+# the history for no reader's benefit. The Space deploy uploads the directory
+# directly, and the promotion log is what records which one was chosen.
+/data/registry/
+/data/registry-e2e/
+
 # Keep small fixtures used by tests
 !/tests/fixtures/
 

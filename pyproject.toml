@@ -31,6 +31,12 @@ dependencies = [
     # demonstrating — the harness around it is — so the standard implementation
     # is the right call here, unlike MinHash or the significance tests.
     "scikit-learn>=1.6",
+    # Serving. FastAPI rather than a serving framework: the interesting problems
+    # here are the alias poll and train/serve skew, and BentoML or KServe would
+    # solve neither while adding a layer to explain. /docs also gives a clickable
+    # Swagger page for free.
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
 ]
 
 [dependency-groups]

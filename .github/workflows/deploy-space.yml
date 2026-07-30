@@ -1,0 +1,94 @@
+name: deploy space
+
+# Pushes the serving container to a Hugging Face Space.
+#
+# Manual rather than on-push. A deploy replaces the running API, and the alias
+# poll means most changes — including every rollback — do not need one. Tying
+# this to `main` would redeploy the service for a README edit.
+
+on:
+  workflow_dispatch:
+    inputs:
+      space:
+        description: "Target Space (owner/name)"
+        required: false
+        default: "aeroo11/kanal"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Refuse to deploy without a promoted model
+        run: |
+          set -o pipefail
+          if [ ! -f data/registry/aliases/champion.json ]; then
+            echo "::error::No champion alias in data/registry — there is nothing to serve."
+            echo "Run the training and promotion job first."
+            exit 1
+          fi
+          echo "champion: $(cat data/registry/aliases/champion.json)"
+
+      - name: Verify the image builds and answers
+        run: |
+          set -o pipefail
+          docker build -t kanal-api .
+          docker run -d --name kanal-test -p 7860:7860 kanal-api
+          # Poll rather than sleep: a fixed wait is either wasted time or a flake.
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:7860/health > /dev/null; then break; fi
+            sleep 2
+          done
+          curl -sf http://localhost:7860/health | tee health.json
+          # A container that starts but has no model is a failed deploy, not a
+          # successful one — this is exactly the case /health exists to expose.
+          python -c "
+          import json, sys
+          h = json.load(open('health.json'))
+          if h['status'] == 'no_champion':
+              sys.exit('the container started but has no model to serve')
+          print(f\"serving {h['model_name']} ({h['model_id']})\")
+          "
+          curl -sf -X POST http://localhost:7860/predict \
+            -H 'content-type: application/json' \
+            -d '{"articles":[{"title":"Bank Indonesia pertahankan suku bunga acuan"}]}'
+          docker rm -f kanal-test
+
+      - name: Push to the Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          SPACE: ${{ inputs.space }}
+        run: |
+          set -o pipefail
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::HF_TOKEN secret is not set."
+            exit 1
+          fi
+          pip install --quiet huggingface_hub
+          # README_SPACE.md carries the YAML front-matter Spaces needs; it is
+          # named differently in the repo so it does not shadow the real README.
+          cp README_SPACE.md /tmp/space-readme.md
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          space = os.environ["SPACE"]
+          api.create_repo(space, repo_type="space", space_sdk="docker", exist_ok=True)
+
+          for local, remote in [
+              ("Dockerfile", "Dockerfile"),
+              ("/tmp/space-readme.md", "README.md"),
+              ("pyproject.toml", "pyproject.toml"),
+              ("uv.lock", "uv.lock"),
+          ]:
+              api.upload_file(path_or_fileobj=local, path_in_repo=remote,
+                              repo_id=space, repo_type="space")
+
+          for folder, remote in [("src", "src"), ("data/registry", "data/registry")]:
+              api.upload_folder(folder_path=folder, path_in_repo=remote,
+                                repo_id=space, repo_type="space")
+
+          print(f"https://huggingface.co/spaces/{space}")
+          PY

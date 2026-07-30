@@ -21,6 +21,7 @@ from kanal.eval.significance import BootstrapResult, McNemarResult
 from kanal.registry.promote import (
     COOLDOWN_HOURS,
     MAX_ECE,
+    MAX_USD_PER_1000,
     MDE,
     GateResult,
     Incumbent,
@@ -243,13 +244,13 @@ class TestLatencyAndCost:
         assert gate.verdict is Verdict.HOLD
         assert any("G5 latency" in r for r in gate.reasons)
 
-    def test_a_challenger_far_more_expensive_is_refused(self) -> None:
+    def test_a_challenger_over_both_limbs_is_refused(self) -> None:
         gate = run(
-            challenger=result(usd=0.10),
+            challenger=result(usd=5.0),
             incumbent=incumbent(usd=0.00002),
         )
         assert gate.verdict is Verdict.HOLD
-        assert any("G6 cost" in r for r in gate.reasons)
+        assert any("over both limbs" in r for r in gate.reasons)
 
     def test_a_slightly_more_expensive_challenger_is_allowed(self) -> None:
         # Within the declared 20% tolerance.
@@ -258,6 +259,44 @@ class TestLatencyAndCost:
             incumbent=incumbent(usd=0.00002),
         )
         assert gate.verdict is Verdict.PROMOTE
+
+    def test_a_free_incumbent_does_not_block_every_real_model(self) -> None:
+        """The bug an end-to-end run found, pinned so it cannot come back.
+
+        With only the tolerance limb, a majority baseline costing ~8e-12 USD per
+        thousand made 120% of itself still round to nothing — and the gate
+        refused a challenger that was +0.69 macro-F1 better with both
+        significance tests passing at p=7e-29. Any real model would have been
+        blocked forever by a baseline that does no work.
+
+        The absolute budget is what makes G6 usable at the cheap end.
+        """
+        gate = run(
+            challenger=result(usd=0.000013),  # the measured TF-IDF figure
+            incumbent=incumbent(usd=8.3e-12),  # the measured majority figure
+        )
+        assert gate.verdict is Verdict.PROMOTE
+        assert any("within budget" in p for p in gate.passed)
+
+    def test_the_budget_limb_still_refuses_a_genuinely_expensive_model(self) -> None:
+        # The budget must not be so loose that it waves everything through. An
+        # LLM at list price is roughly four orders of magnitude above TF-IDF.
+        gate = run(
+            challenger=result(usd=0.15),
+            incumbent=incumbent(usd=8.3e-12),
+        )
+        assert gate.verdict is Verdict.HOLD
+        assert any(f"{MAX_USD_PER_1000:.4f}" in r for r in gate.reasons)
+
+    def test_the_tolerance_limb_still_helps_an_expensive_incumbent(self) -> None:
+        # Symmetry: if the champion is already over budget, a challenger that is
+        # no worse should not be refused for inheriting the situation.
+        gate = run(
+            challenger=result(usd=0.20),
+            incumbent=incumbent(usd=0.20),
+        )
+        assert gate.verdict is Verdict.PROMOTE
+        assert any("within tolerance" in p for p in gate.passed)
 
 
 class TestCooldown:
