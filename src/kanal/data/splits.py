@@ -152,8 +152,11 @@ def temporal_split(
     articles: list[Article],
     *,
     anchor: datetime | None = None,
-    train_cutoff_days: int = TRAIN_CUTOFF_DAYS,
-    val_cutoff_days: int = VAL_CUTOFF_DAYS,
+    # Float, not int. A corpus with only days of collection history needs
+    # sub-day windows, and the training job derives them from the prediction
+    # horizon rather than from the protocol's default.
+    train_cutoff_days: float = TRAIN_CUTOFF_DAYS,
+    val_cutoff_days: float = VAL_CUTOFF_DAYS,
 ) -> SplitManifest:
     """Split by publication time, assigning whole clusters.
 

@@ -86,6 +86,48 @@ checked**. If the test set is more than 80% a single publisher, the split is
 rejected and the reason recorded — a test set that is effectively one publisher
 measures that publisher, not the task.
 
+> #### Correction, 2026-07-31 — the window assumed history the corpus does not have
+>
+> The 14/7-day windows above were fixed when the assumption was weeks of
+> collection history. The corpus has days of it, and the age distribution shows
+> why the default measures the wrong side of a cliff:
+>
+> | percentile | article age when fetched |
+> |---|---|
+> | 50th | 1.26 days |
+> | 75th | 3.35 days |
+> | **90th** | **85.4 days** |
+> | 95th | 214.9 days |
+>
+> Three quarters of the corpus is under 3.4 days old, and then it jumps to
+> months — that jump is ANTARA's evergreen explainers, not history.
+>
+> **The fallback window is derived from the operational question, not from a
+> table of scores:** *classify the next day's news given everything before it.*
+> That gives a one-day test window, a one-day validation window, and training on
+> everything earlier. No part of those numbers refers to a result.
+>
+> That distinction is load-bearing, because the windows were also swept and the
+> sweep is exactly what a protocol exists to stop anyone selecting from:
+>
+> | train/val | train | test | macro-F1 | ECE |
+> |---|---|---|---|---|
+> | 14/7 | 163 | 1077 | 0.3015 | 0.1007 |
+> | 3/1 | 347 | 517 | 0.3451 | 0.0673 |
+> | 2/1 | 470 | 517 | 0.4200 | 0.0683 |
+> | 1/0.5 | 778 | 341 | 0.7102 | 0.0835 |
+>
+> **Those macro-F1 values are not comparable with each other.** Narrowing the
+> window does not only hand the model more training data — it makes the task
+> easier, because predicting twelve hours ahead is a different problem from
+> predicting seven days ahead. The prediction horizon is part of the task
+> definition, and every run records the horizon it used so nobody later reads
+> 0.71 and 0.30 as a model improvement.
+>
+> The default stays 14/7. The fallback fires only when the default produces a
+> split with more test rows than training rows, it is logged loudly, and the run
+> report carries `horizon_days` and a warning that says so.
+
 ### Frozen manifest
 
 Every split is written to a manifest containing the article keys per split, the

@@ -114,6 +114,24 @@ def _cmd_status(_: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_train(args: argparse.Namespace) -> int:
+    from kanal.training.run import train_and_promote
+
+    run = train_and_promote(
+        registry_root=Path(args.registry),
+        use_random_split=args.random_split,
+        resamples=args.resamples,
+    )
+    print(run.summary())
+
+    # A run that promotes nothing is a success. Treating "no promotion" as an
+    # error teaches whoever watches CI to ignore red, and the gate exists
+    # precisely so that most challengers do not pass.
+    if run.verdict == "UNUSABLE":
+        return 2
+    return 0
+
+
 def _registry(args: argparse.Namespace) -> Registry:
     from kanal.registry.store import Registry
 
@@ -252,6 +270,26 @@ def main(argv: list[str] | None = None) -> int:
 
     status = sub.add_parser("status", help="show landing-zone and feed-registry state")
     status.set_defaults(func=_cmd_status)
+
+    train_cmd = sub.add_parser(
+        "train",
+        help="build a split, fit the candidates, run the gate, promote the winner",
+        description=(
+            "Exits zero whether or not anything is promoted — refusing a "
+            "challenger is the gate working, not the job failing."
+        ),
+    )
+    train_cmd.add_argument(
+        "--registry", type=Path, default=Path("data/registry"), help="registry root"
+    )
+    train_cmd.add_argument(
+        "--random-split",
+        action="store_true",
+        help="use a random split instead of the temporal one. For measuring the "
+        "inflation only — never for a result (see docs/evaluation.md)",
+    )
+    train_cmd.add_argument("--resamples", type=int, default=10_000)
+    train_cmd.set_defaults(func=_cmd_train)
 
     # Registry operations. `champion` and `rollback` are the two anyone reaches
     # for during an incident, so they take no required arguments.
