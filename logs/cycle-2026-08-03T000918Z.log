@@ -1,0 +1,63 @@
+polling 27 feed(s)…
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/politik.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:politik: landed 16 new (4 dup) → antara-politik-000847.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hukum.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:hukum: landed 20 new (0 dup) → antara-hukum-000848.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/ekonomi.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:ekonomi: landed 19 new (1 dup) → antara-ekonomi-000849.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/metro.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:metro: landed 17 new (3 dup) → antara-metro-000850.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/sepakbola.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:sepakbola: landed 19 new (1 dup) → antara-sepakbola-000852.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/tekno.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:tekno: landed 15 new (5 dup) → antara-tekno-000853.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hiburan.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:hiburan: landed 19 new (1 dup) → antara-hiburan-000854.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/dunia.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:dunia: landed 20 new (0 dup) → antara-dunia-000856.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/humaniora.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:humaniora: landed 16 new (4 dup) → antara-humaniora-000857.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/lifestyle.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/nasional/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:nasional after 51 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/ekonomi/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:ekonomi after 51 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/olahraga/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:olahraga after 51 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/teknologi/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:teknologi after 51 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/hiburan/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:hiburan after 51 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/internasional/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:internasional after 51 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/gaya-hidup/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:gaya-hidup after 51 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bisnis "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:bisnis: landed 5 new (45 dup) → liputan6-bisnis-000906.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bola "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:bola: landed 4 new (46 dup) → liputan6-bola-000908.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/tekno "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:tekno: landed 22 new (28 dup) → liputan6-tekno-000909.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/showbiz "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/global "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:global: landed 1 new (49 dup) → liputan6-global-000912.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/health "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:health: landed 49 new (1 dup) → liputan6-health-000913.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/lifestyle "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:lifestyle: landed 1 new (49 dup) → liputan6-lifestyle-000914.jsonl
+INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/nasional "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/ekonomi "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            republika:ekonomi: landed 1 new (14 dup) → republika-ekonomi-000917.jsonl
+INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/internasional "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            republika:internasional: landed 2 new (13 dup) → republika-internasional-000918.jsonl
+cycle 2026-08-03 00:08:46 UTC (32.6s)
+  landed 246 new, 349 already seen
+  feeds: failed=7, ok=20
+  per source:
+      antara     10/10 feeds ok, 161 landed
+    ~ cnn        0/7 feeds ok, 0 landed  (declared unreachable here)
+      liputan6   7/7 feeds ok, 82 landed
+      republika  3/3 feeds ok, 3 landed
+  failures:
+    failed: HTTP 403
+      affected: cnn:nasional, cnn:ekonomi, cnn:olahraga, cnn:teknologi (+3 more)
