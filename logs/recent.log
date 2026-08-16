@@ -1,48 +1,3 @@
-INFO    kanal.ingest.land            liputan6:bisnis: landed 1 new (49 dup) → liputan6-bisnis-232917.jsonl
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bola "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:bola: landed 2 new (48 dup) → liputan6-bola-232919.jsonl
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/tekno "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:tekno: landed 1 new (49 dup) → liputan6-tekno-232920.jsonl
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/showbiz "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:showbiz: landed 1 new (49 dup) → liputan6-showbiz-232921.jsonl
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/global "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:global: landed 1 new (49 dup) → liputan6-global-232922.jsonl
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/health "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/lifestyle "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:lifestyle: landed 1 new (49 dup) → liputan6-lifestyle-232925.jsonl
-INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/nasional "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/ekonomi "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            republika:ekonomi: landed 1 new (14 dup) → republika-ekonomi-232928.jsonl
-INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/internasional "HTTP/1.1 200 OK"
-cycle 2026-08-15 23:28:57 UTC (31.7s)
-  landed 8 new, 587 already seen
-  feeds: ok=20, skipped_breaker=7
-  per source:
-      antara     10/10 feeds ok, 0 landed
-    ~ cnn        0/7 feeds ok, 0 landed  (declared unreachable here)
-      liputan6   7/7 feeds ok, 7 landed
-      republika  3/3 feeds ok, 1 landed
-  failures:
-    skipped_breaker: cooldown 157s
-      affected: cnn:nasional, cnn:ekonomi, cnn:olahraga, cnn:teknologi (+3 more)
-
-=== 2026-08-16T015328Z ===
-polling 27 feed(s)…
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/politik.xml "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            antara:politik: landed 4 new (16 dup) → antara-politik-015256.jsonl
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hukum.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/ekonomi.xml "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            antara:ekonomi: landed 3 new (17 dup) → antara-ekonomi-015259.jsonl
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/metro.xml "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            antara:metro: landed 4 new (16 dup) → antara-metro-015300.jsonl
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/sepakbola.xml "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            antara:sepakbola: landed 1 new (19 dup) → antara-sepakbola-015301.jsonl
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/tekno.xml "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            antara:tekno: landed 3 new (17 dup) → antara-tekno-015302.jsonl
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hiburan.xml "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            antara:hiburan: landed 1 new (19 dup) → antara-hiburan-015304.jsonl
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/dunia.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/humaniora.xml "HTTP/1.1 200 OK"
 INFO    kanal.ingest.land            antara:humaniora: landed 8 new (12 dup) → antara-humaniora-015306.jsonl
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/lifestyle.xml "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/nasional/rss "HTTP/1.1 403 Forbidden"
@@ -396,5 +351,50 @@ cycle 2026-08-16 08:40:23 UTC (32.8s)
       republika  3/3 feeds ok, 0 landed
   failures:
     failed: HTTP 403
+      affected: cnn:nasional, cnn:ekonomi, cnn:olahraga, cnn:teknologi (+3 more)
+
+=== 2026-08-16T093633Z ===
+polling 27 feed(s)…
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/politik.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hukum.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/ekonomi.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/metro.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/sepakbola.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/tekno.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hiburan.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/dunia.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/humaniora.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/lifestyle.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.fetch           breaker open for cnn:nasional, 262s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:ekonomi, 262s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:olahraga, 262s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:teknologi, 262s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:hiburan, 262s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:internasional, 262s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:gaya-hidup, 262s remaining
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bisnis "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:bisnis: landed 1 new (49 dup) → liputan6-bisnis-093621.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bola "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:bola: landed 1 new (49 dup) → liputan6-bola-093622.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/tekno "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/showbiz "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:showbiz: landed 2 new (48 dup) → liputan6-showbiz-093625.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/global "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:global: landed 1 new (49 dup) → liputan6-global-093626.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/health "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/lifestyle "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/nasional "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/ekonomi "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/internasional "HTTP/1.1 200 OK"
+cycle 2026-08-16 09:36:01 UTC (32.4s)
+  landed 5 new, 590 already seen
+  feeds: ok=20, skipped_breaker=7
+  per source:
+      antara     10/10 feeds ok, 0 landed
+    ~ cnn        0/7 feeds ok, 0 landed  (declared unreachable here)
+      liputan6   7/7 feeds ok, 5 landed
+      republika  3/3 feeds ok, 0 landed
+  failures:
+    skipped_breaker: cooldown 262s
       affected: cnn:nasional, cnn:ekonomi, cnn:olahraga, cnn:teknologi (+3 more)
 
