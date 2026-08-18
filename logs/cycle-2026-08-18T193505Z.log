@@ -9,13 +9,13 @@ INFO    httpx                        HTTP Request: GET https://www.antaranews.co
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/dunia.xml "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/humaniora.xml "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/lifestyle.xml "HTTP/1.1 200 OK"
-INFO    kanal.ingest.fetch           breaker open for cnn:nasional, 742s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:ekonomi, 742s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:olahraga, 742s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:teknologi, 742s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:hiburan, 742s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:internasional, 742s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:gaya-hidup, 742s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:nasional, 992s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:ekonomi, 992s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:olahraga, 992s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:teknologi, 992s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:hiburan, 992s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:internasional, 992s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:gaya-hidup, 992s remaining
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bisnis "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bola "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/tekno "HTTP/1.1 200 OK"
@@ -26,7 +26,7 @@ INFO    httpx                        HTTP Request: GET https://feed.liputan6.com
 INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/nasional "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/ekonomi "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/internasional "HTTP/1.1 200 OK"
-cycle 2026-08-16 19:28:10 UTC (32.6s)
+cycle 2026-08-18 19:34:32 UTC (32.6s)
   landed 0 new, 595 already seen
   feeds: ok=20, skipped_breaker=7
   per source:
@@ -35,5 +35,5 @@ cycle 2026-08-16 19:28:10 UTC (32.6s)
       liputan6   7/7 feeds ok, 0 landed
       republika  3/3 feeds ok, 0 landed
   failures:
-    skipped_breaker: cooldown 742s
+    skipped_breaker: cooldown 992s
       affected: cnn:nasional, cnn:ekonomi, cnn:olahraga, cnn:teknologi (+3 more)
