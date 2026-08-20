@@ -9,32 +9,37 @@ INFO    httpx                        HTTP Request: GET https://www.antaranews.co
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/dunia.xml "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/humaniora.xml "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/lifestyle.xml "HTTP/1.1 200 OK"
-INFO    kanal.ingest.fetch           breaker open for cnn:nasional, 438s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:ekonomi, 438s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:olahraga, 438s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:teknologi, 438s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:hiburan, 438s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:internasional, 438s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:gaya-hidup, 438s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:nasional, 484s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:ekonomi, 484s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:olahraga, 484s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:teknologi, 484s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:hiburan, 484s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:internasional, 484s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:gaya-hidup, 484s remaining
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bisnis "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:bisnis: landed 1 new (49 dup) → liputan6-bisnis-172857.jsonl
+INFO    kanal.ingest.land            liputan6:bisnis: landed 6 new (44 dup) → liputan6-bisnis-053918.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bola "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:bola: landed 1 new (49 dup) → liputan6-bola-053919.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/tekno "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:tekno: landed 1 new (49 dup) → liputan6-tekno-053920.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/showbiz "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:showbiz: landed 4 new (46 dup) → liputan6-showbiz-053922.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/global "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:global: landed 1 new (49 dup) → liputan6-global-053923.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/health "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/lifestyle "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:lifestyle: landed 1 new (49 dup) → liputan6-lifestyle-053925.jsonl
 INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/nasional "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/ekonomi "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/internasional "HTTP/1.1 200 OK"
-cycle 2026-08-16 17:28:37 UTC (31.5s)
-  landed 1 new, 594 already seen
+cycle 2026-08-20 05:38:58 UTC (32.0s)
+  landed 14 new, 581 already seen
   feeds: ok=20, skipped_breaker=7
   per source:
       antara     10/10 feeds ok, 0 landed
     ~ cnn        0/7 feeds ok, 0 landed  (declared unreachable here)
-      liputan6   7/7 feeds ok, 1 landed
+      liputan6   7/7 feeds ok, 14 landed
       republika  3/3 feeds ok, 0 landed
   failures:
-    skipped_breaker: cooldown 438s
+    skipped_breaker: cooldown 484s
       affected: cnn:nasional, cnn:ekonomi, cnn:olahraga, cnn:teknologi (+3 more)
