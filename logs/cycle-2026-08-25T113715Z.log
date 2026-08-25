@@ -9,32 +9,37 @@ INFO    httpx                        HTTP Request: GET https://www.antaranews.co
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/dunia.xml "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/humaniora.xml "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/lifestyle.xml "HTTP/1.1 200 OK"
-INFO    kanal.ingest.fetch           breaker open for cnn:nasional, 107s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:ekonomi, 107s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:olahraga, 107s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:teknologi, 107s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:hiburan, 107s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:internasional, 107s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:gaya-hidup, 107s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:nasional, 334s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:ekonomi, 334s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:olahraga, 334s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:teknologi, 334s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:hiburan, 334s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:internasional, 334s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:gaya-hidup, 334s remaining
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bisnis "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:bisnis: landed 1 new (49 dup) → liputan6-bisnis-113702.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bola "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:bola: landed 1 new (49 dup) → liputan6-bola-213321.jsonl
+INFO    kanal.ingest.land            liputan6:bola: landed 1 new (49 dup) → liputan6-bola-113703.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/tekno "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:tekno: landed 1 new (49 dup) → liputan6-tekno-113705.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/showbiz "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:showbiz: landed 1 new (49 dup) → liputan6-showbiz-113706.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/global "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:global: landed 1 new (49 dup) → liputan6-global-113707.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/health "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/lifestyle "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/nasional "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/ekonomi "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/internasional "HTTP/1.1 200 OK"
-cycle 2026-08-21 21:32:58 UTC (33.3s)
-  landed 1 new, 594 already seen
+INFO    kanal.ingest.land            republika:internasional: landed 2 new (13 dup) → republika-internasional-113715.jsonl
+cycle 2026-08-25 11:36:41 UTC (33.7s)
+  landed 7 new, 588 already seen
   feeds: ok=20, skipped_breaker=7
   per source:
       antara     10/10 feeds ok, 0 landed
     ~ cnn        0/7 feeds ok, 0 landed  (declared unreachable here)
-      liputan6   7/7 feeds ok, 1 landed
-      republika  3/3 feeds ok, 0 landed
+      liputan6   7/7 feeds ok, 5 landed
+      republika  3/3 feeds ok, 2 landed
   failures:
-    skipped_breaker: cooldown 107s
+    skipped_breaker: cooldown 334s
       affected: cnn:nasional, cnn:ekonomi, cnn:olahraga, cnn:teknologi (+3 more)
