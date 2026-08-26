@@ -9,36 +9,38 @@ INFO    httpx                        HTTP Request: GET https://www.antaranews.co
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/dunia.xml "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/humaniora.xml "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/lifestyle.xml "HTTP/1.1 200 OK"
-INFO    kanal.ingest.fetch           breaker open for cnn:nasional, 189s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:ekonomi, 189s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:olahraga, 189s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:teknologi, 189s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:hiburan, 189s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:internasional, 189s remaining
-INFO    kanal.ingest.fetch           breaker open for cnn:gaya-hidup, 189s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:nasional, 451s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:ekonomi, 451s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:olahraga, 451s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:teknologi, 451s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:hiburan, 451s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:internasional, 451s remaining
+INFO    kanal.ingest.fetch           breaker open for cnn:gaya-hidup, 451s remaining
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bisnis "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:bisnis: landed 1 new (49 dup) → liputan6-bisnis-232926.jsonl
+INFO    kanal.ingest.land            liputan6:bisnis: landed 4 new (46 dup) → liputan6-bisnis-113812.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bola "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:bola: landed 1 new (49 dup) → liputan6-bola-232927.jsonl
+INFO    kanal.ingest.land            liputan6:bola: landed 3 new (47 dup) → liputan6-bola-113813.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/tekno "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:tekno: landed 1 new (49 dup) → liputan6-tekno-232929.jsonl
+INFO    kanal.ingest.land            liputan6:tekno: landed 1 new (49 dup) → liputan6-tekno-113814.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/showbiz "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:showbiz: landed 1 new (49 dup) → liputan6-showbiz-113816.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/global "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:global: landed 1 new (49 dup) → liputan6-global-232931.jsonl
+INFO    kanal.ingest.land            liputan6:global: landed 2 new (48 dup) → liputan6-global-113817.jsonl
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/health "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/lifestyle "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:lifestyle: landed 4 new (46 dup) → liputan6-lifestyle-113820.jsonl
 INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/nasional "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/ekonomi "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            republika:ekonomi: landed 1 new (14 dup) → republika-ekonomi-232936.jsonl
+INFO    kanal.ingest.land            republika:ekonomi: landed 5 new (10 dup) → republika-ekonomi-113823.jsonl
 INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/internasional "HTTP/1.1 200 OK"
-cycle 2026-08-22 23:29:06 UTC (32.2s)
-  landed 5 new, 590 already seen
+cycle 2026-08-26 11:37:52 UTC (32.7s)
+  landed 20 new, 575 already seen
   feeds: ok=20, skipped_breaker=7
   per source:
       antara     10/10 feeds ok, 0 landed
     ~ cnn        0/7 feeds ok, 0 landed  (declared unreachable here)
-      liputan6   7/7 feeds ok, 4 landed
-      republika  3/3 feeds ok, 1 landed
+      liputan6   7/7 feeds ok, 15 landed
+      republika  3/3 feeds ok, 5 landed
   failures:
-    skipped_breaker: cooldown 189s
+    skipped_breaker: cooldown 451s
       affected: cnn:nasional, cnn:ekonomi, cnn:olahraga, cnn:teknologi (+3 more)
