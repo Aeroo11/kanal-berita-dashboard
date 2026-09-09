@@ -2,51 +2,51 @@
   "antara:dunia": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
-    "etag": "W/\"6aa16c7e-722d\"",
-    "last_modified": "Wed, 09 Sep 2026 14:26:06 GMT",
-    "last_success_ts": 1788963978.1256707
+    "etag": "W/\"6aa1a574-722d\"",
+    "last_modified": "Wed, 09 Sep 2026 18:29:08 GMT",
+    "last_success_ts": 1788978589.984135
   },
   "antara:ekonomi": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
-    "etag": "W/\"6aa16c7b-7b9d\"",
-    "last_modified": "Wed, 09 Sep 2026 14:26:03 GMT",
-    "last_success_ts": 1788963972.125696
+    "etag": "W/\"6aa1a56f-7b9d\"",
+    "last_modified": "Wed, 09 Sep 2026 18:29:03 GMT",
+    "last_success_ts": 1788978584.058953
   },
   "antara:hiburan": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
-    "etag": "W/\"6aa16c7d-7bc3\"",
-    "last_modified": "Wed, 09 Sep 2026 14:26:05 GMT",
-    "last_success_ts": 1788963976.9267294
+    "etag": "W/\"6aa1a573-7bc3\"",
+    "last_modified": "Wed, 09 Sep 2026 18:29:07 GMT",
+    "last_success_ts": 1788978588.7992606
   },
   "antara:hukum": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
-    "etag": "W/\"6aa16c3f-8423\"",
-    "last_modified": "Wed, 09 Sep 2026 14:25:03 GMT",
-    "last_success_ts": 1788963970.9248264
+    "etag": "W/\"6aa1a56f-8423\"",
+    "last_modified": "Wed, 09 Sep 2026 18:29:03 GMT",
+    "last_success_ts": 1788978582.8739076
   },
   "antara:humaniora": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
-    "etag": "W/\"6aa16c7d-7899\"",
-    "last_modified": "Wed, 09 Sep 2026 14:26:05 GMT",
-    "last_success_ts": 1788963979.3264546
+    "etag": "W/\"6aa1a573-7899\"",
+    "last_modified": "Wed, 09 Sep 2026 18:29:07 GMT",
+    "last_success_ts": 1788978591.1704435
   },
   "antara:lifestyle": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
-    "etag": "W/\"6aa16c7d-7687\"",
-    "last_modified": "Wed, 09 Sep 2026 14:26:05 GMT",
-    "last_success_ts": 1788963980.5302074
+    "etag": "W/\"6aa1a573-7687\"",
+    "last_modified": "Wed, 09 Sep 2026 18:29:07 GMT",
+    "last_success_ts": 1788978592.3552957
   },
   "antara:metro": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
-    "etag": "W/\"6aa16c7c-75cb\"",
-    "last_modified": "Wed, 09 Sep 2026 14:26:04 GMT",
-    "last_success_ts": 1788963973.3297603
+    "etag": "W/\"6aa1a571-75cb\"",
+    "last_modified": "Wed, 09 Sep 2026 18:29:05 GMT",
+    "last_success_ts": 1788978585.2437515
   },
   "antara:olahraga": {
     "breaker_open_until": 0.0,
@@ -58,69 +58,69 @@
   "antara:politik": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
-    "etag": "W/\"6aa16c7a-7b55\"",
-    "last_modified": "Wed, 09 Sep 2026 14:26:02 GMT",
-    "last_success_ts": 1788963969.7141376
+    "etag": "W/\"6aa1a56e-7b55\"",
+    "last_modified": "Wed, 09 Sep 2026 18:29:02 GMT",
+    "last_success_ts": 1788978581.6475565
   },
   "antara:sepakbola": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
-    "etag": "W/\"6aa16c7c-7d76\"",
-    "last_modified": "Wed, 09 Sep 2026 14:26:04 GMT",
-    "last_success_ts": 1788963974.5294404
+    "etag": "W/\"6aa1a571-7d76\"",
+    "last_modified": "Wed, 09 Sep 2026 18:29:05 GMT",
+    "last_success_ts": 1788978586.4294784
   },
   "antara:tekno": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
-    "etag": "W/\"6aa16c7e-74a9\"",
-    "last_modified": "Wed, 09 Sep 2026 14:26:06 GMT",
-    "last_success_ts": 1788963975.7281425
+    "etag": "W/\"6aa1a574-74a9\"",
+    "last_modified": "Wed, 09 Sep 2026 18:29:08 GMT",
+    "last_success_ts": 1788978587.614457
   },
   "cnn:ekonomi": {
-    "breaker_open_until": 1788967582.645163,
-    "consecutive_failures": 397,
+    "breaker_open_until": 1788982194.4943328,
+    "consecutive_failures": 398,
     "etag": null,
     "last_modified": null,
     "last_success_ts": null
   },
   "cnn:gaya-hidup": {
-    "breaker_open_until": 1788967587.713292,
-    "consecutive_failures": 397,
+    "breaker_open_until": 1788982199.543741,
+    "consecutive_failures": 398,
     "etag": null,
     "last_modified": null,
     "last_success_ts": null
   },
   "cnn:hiburan": {
-    "breaker_open_until": 1788967585.6856418,
-    "consecutive_failures": 397,
+    "breaker_open_until": 1788982197.5248487,
+    "consecutive_failures": 398,
     "etag": null,
     "last_modified": null,
     "last_success_ts": null
   },
   "cnn:internasional": {
-    "breaker_open_until": 1788967586.6995597,
-    "consecutive_failures": 397,
+    "breaker_open_until": 1788982198.5348518,
+    "consecutive_failures": 398,
     "etag": null,
     "last_modified": null,
     "last_success_ts": null
   },
   "cnn:nasional": {
-    "breaker_open_until": 1788967581.629953,
-    "consecutive_failures": 397,
+    "breaker_open_until": 1788982193.484526,
+    "consecutive_failures": 398,
     "etag": null,
     "last_modified": null,
     "last_success_ts": null
   },
   "cnn:olahraga": {
-    "breaker_open_until": 1788967583.6595469,
-    "consecutive_failures": 397,
+    "breaker_open_until": 1788982195.5066066,
+    "consecutive_failures": 398,
     "etag": null,
     "last_modified": null,
     "last_success_ts": null
   },
   "cnn:teknologi": {
-    "breaker_open_until": 1788967584.6716692,
-    "consecutive_failures": 397,
+    "breaker_open_until": 1788982196.515514,
+    "consecutive_failures": 398,
     "etag": null,
     "last_modified": null,
     "last_success_ts": null
@@ -130,69 +130,69 @@
     "consecutive_failures": 0,
     "etag": null,
     "last_modified": null,
-    "last_success_ts": 1788963989.1317952
+    "last_success_ts": 1788978601.039608
   },
   "liputan6:bola": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
     "etag": null,
     "last_modified": null,
-    "last_success_ts": 1788963990.4061184
+    "last_success_ts": 1788978602.300403
   },
   "liputan6:global": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
     "etag": null,
     "last_modified": null,
-    "last_success_ts": 1788963994.1769261
+    "last_success_ts": 1788978606.0510237
   },
   "liputan6:health": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
     "etag": null,
     "last_modified": null,
-    "last_success_ts": 1788963995.4358668
+    "last_success_ts": 1788978607.3065307
   },
   "liputan6:lifestyle": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
     "etag": null,
     "last_modified": null,
-    "last_success_ts": 1788963996.6926847
+    "last_success_ts": 1788978608.5579069
   },
   "liputan6:showbiz": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
     "etag": null,
     "last_modified": null,
-    "last_success_ts": 1788963992.917191
+    "last_success_ts": 1788978604.8031626
   },
   "liputan6:tekno": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
     "etag": null,
     "last_modified": null,
-    "last_success_ts": 1788963991.6565511
+    "last_success_ts": 1788978603.5533385
   },
   "republika:ekonomi": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
     "etag": null,
     "last_modified": null,
-    "last_success_ts": 1788963999.357379
+    "last_success_ts": 1788978611.286887
   },
   "republika:internasional": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
     "etag": null,
     "last_modified": null,
-    "last_success_ts": 1788964000.755694
+    "last_success_ts": 1788978612.8877726
   },
   "republika:nasional": {
     "breaker_open_until": 0.0,
     "consecutive_failures": 0,
     "etag": null,
     "last_modified": null,
-    "last_success_ts": 1788963998.1276755
+    "last_success_ts": 1788978610.053768
   }
 }
