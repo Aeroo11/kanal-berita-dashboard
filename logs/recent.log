@@ -1,71 +1,3 @@
-      affected: cnn:nasional, cnn:ekonomi, cnn:olahraga, cnn:teknologi (+3 more)
-
-=== 2026-10-28T081825Z ===
-polling 27 feed(s)…
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/politik.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hukum.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/ekonomi.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/metro.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/sepakbola.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/tekno.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hiburan.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/dunia.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/humaniora.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/lifestyle.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/nasional/rss "HTTP/1.1 403 Forbidden"
-WARNING kanal.ingest.fetch           breaker tripped for cnn:nasional after 647 failures; cooling down 3600s
-INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/ekonomi/rss "HTTP/1.1 403 Forbidden"
-WARNING kanal.ingest.fetch           breaker tripped for cnn:ekonomi after 647 failures; cooling down 3600s
-INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/olahraga/rss "HTTP/1.1 403 Forbidden"
-WARNING kanal.ingest.fetch           breaker tripped for cnn:olahraga after 647 failures; cooling down 3600s
-INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/teknologi/rss "HTTP/1.1 403 Forbidden"
-WARNING kanal.ingest.fetch           breaker tripped for cnn:teknologi after 647 failures; cooling down 3600s
-INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/hiburan/rss "HTTP/1.1 403 Forbidden"
-WARNING kanal.ingest.fetch           breaker tripped for cnn:hiburan after 647 failures; cooling down 3600s
-INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/internasional/rss "HTTP/1.1 403 Forbidden"
-WARNING kanal.ingest.fetch           breaker tripped for cnn:internasional after 647 failures; cooling down 3600s
-INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/gaya-hidup/rss "HTTP/1.1 403 Forbidden"
-WARNING kanal.ingest.fetch           breaker tripped for cnn:gaya-hidup after 647 failures; cooling down 3600s
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bisnis "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:bisnis: landed 24 new (26 dup) → liputan6-bisnis-081813.jsonl
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bola "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:bola: landed 17 new (33 dup) → liputan6-bola-081814.jsonl
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/tekno "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:tekno: landed 8 new (42 dup) → liputan6-tekno-081816.jsonl
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/showbiz "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:showbiz: landed 19 new (31 dup) → liputan6-showbiz-081817.jsonl
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/global "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:global: landed 12 new (38 dup) → liputan6-global-081818.jsonl
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/health "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:health: landed 2 new (48 dup) → liputan6-health-081820.jsonl
-INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/lifestyle "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            liputan6:lifestyle: landed 19 new (31 dup) → liputan6-lifestyle-081821.jsonl
-INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/nasional "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/ekonomi "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            republika:ekonomi: landed 15 new (0 dup) → republika-ekonomi-081824.jsonl
-INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/internasional "HTTP/1.1 200 OK"
-INFO    kanal.ingest.land            republika:internasional: landed 8 new (7 dup) → republika-internasional-081825.jsonl
-cycle 2026-10-28 08:17:52 UTC (32.8s)
-  landed 124 new, 471 already seen
-  feeds: failed=7, ok=20
-  per source:
-      antara     10/10 feeds ok, 0 landed
-    ~ cnn        0/7 feeds ok, 0 landed  (declared unreachable here)
-      liputan6   7/7 feeds ok, 101 landed
-      republika  3/3 feeds ok, 23 landed
-  failures:
-    failed: HTTP 403
-      affected: cnn:nasional, cnn:ekonomi, cnn:olahraga, cnn:teknologi (+3 more)
-
-=== 2026-10-28T155541Z ===
-polling 27 feed(s)…
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/politik.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hukum.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/ekonomi.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/metro.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/sepakbola.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/tekno.xml "HTTP/1.1 200 OK"
-INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hiburan.xml "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/dunia.xml "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/humaniora.xml "HTTP/1.1 200 OK"
 INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/lifestyle.xml "HTTP/1.1 200 OK"
@@ -394,6 +326,74 @@ cycle 2026-10-29 20:11:37 UTC (33.5s)
     ~ cnn        0/7 feeds ok, 0 landed  (declared unreachable here)
       liputan6   7/7 feeds ok, 25 landed
       republika  3/3 feeds ok, 16 landed
+  failures:
+    failed: HTTP 403
+      affected: cnn:nasional, cnn:ekonomi, cnn:olahraga, cnn:teknologi (+3 more)
+
+=== 2026-10-30T004825Z ===
+polling 27 feed(s)…
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/politik.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:politik: landed 5 new (15 dup) → antara-politik-004752.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hukum.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:hukum: landed 10 new (10 dup) → antara-hukum-004754.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/ekonomi.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:ekonomi: landed 7 new (13 dup) → antara-ekonomi-004755.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/metro.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:metro: landed 11 new (9 dup) → antara-metro-004756.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/sepakbola.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:sepakbola: landed 2 new (18 dup) → antara-sepakbola-004757.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/tekno.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:tekno: landed 2 new (18 dup) → antara-tekno-004758.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hiburan.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:hiburan: landed 4 new (16 dup) → antara-hiburan-004800.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/dunia.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:dunia: landed 16 new (4 dup) → antara-dunia-004801.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/humaniora.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:humaniora: landed 6 new (14 dup) → antara-humaniora-004802.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/lifestyle.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:lifestyle: landed 13 new (7 dup) → antara-lifestyle-004803.jsonl
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/nasional/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:nasional after 654 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/ekonomi/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:ekonomi after 654 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/olahraga/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:olahraga after 654 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/teknologi/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:teknologi after 654 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/hiburan/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:hiburan after 654 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/internasional/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:internasional after 654 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/gaya-hidup/rss "HTTP/1.1 403 Forbidden"
+WARNING kanal.ingest.fetch           breaker tripped for cnn:gaya-hidup after 654 failures; cooling down 3600s
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bisnis "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:bisnis: landed 4 new (46 dup) → liputan6-bisnis-004812.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bola "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:bola: landed 5 new (45 dup) → liputan6-bola-004814.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/tekno "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:tekno: landed 8 new (42 dup) → liputan6-tekno-004815.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/showbiz "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:showbiz: landed 2 new (48 dup) → liputan6-showbiz-004816.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/global "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:global: landed 3 new (47 dup) → liputan6-global-004818.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/health "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:health: landed 22 new (28 dup) → liputan6-health-004819.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/lifestyle "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:lifestyle: landed 2 new (48 dup) → liputan6-lifestyle-004820.jsonl
+INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/nasional "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            republika:nasional: landed 3 new (12 dup) → republika-nasional-004822.jsonl
+INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/ekonomi "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            republika:ekonomi: landed 5 new (10 dup) → republika-ekonomi-004823.jsonl
+INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/internasional "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            republika:internasional: landed 5 new (10 dup) → republika-internasional-004825.jsonl
+cycle 2026-10-30 00:47:52 UTC (33.1s)
+  landed 135 new, 460 already seen
+  feeds: failed=7, ok=20
+  per source:
+      antara     10/10 feeds ok, 76 landed
+    ~ cnn        0/7 feeds ok, 0 landed  (declared unreachable here)
+      liputan6   7/7 feeds ok, 46 landed
+      republika  3/3 feeds ok, 13 landed
   failures:
     failed: HTTP 403
       affected: cnn:nasional, cnn:ekonomi, cnn:olahraga, cnn:teknologi (+3 more)
