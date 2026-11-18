@@ -1,20 +1,85 @@
 # KANAL
 
-Platform *model lifecycle* untuk klasifikasi berita Indonesia: **cari model
-terbaik, deploy, dan jaga supaya tetap jujur.**
+KANAL mengklasifikasikan judul dan ringkasan berita Indonesia ke delapan kanal.
+Proyek ini menunjukkan cara membandingkan model pada berita yang lebih baru,
+mencatat keputusan promosi, dan memulihkan versi sebelumnya.
 
-**Dataset:** [`aeroo11/kanal-berita`](https://huggingface.co/datasets/aeroo11/kanal-berita)
-— judul berita Indonesia berlabel section, dikumpulkan tiap jam, dengan rate
-kebocoran dan properti evergreen-nya dinyatakan sebagai angka terukur.
+**Dataset publik** [`aeroo11/kanal-berita`](https://huggingface.co/datasets/aeroo11/kanal-berita)
 
-> **Status: Stage 1 selesai** — ingestion, warehouse, dbt + data contracts,
-> orkestrasi, dan publikasi dataset. Tag: `stage-1`.
-> README ini hanya menjelaskan apa yang sudah benar-benar dibangun. Bagian baru
-> ditambahkan setelah kodenya ada, bukan sebelumnya.
+```mermaid
+flowchart LR
+    A[Feed RSS] --> B[DuckDB dan dbt]
+    B --> C[Snapshot Parquet]
+    C --> D[Evaluasi temporal]
+    D --> E[Registry model]
+    E --> F[FastAPI]
+```
+
+## Hasil v1
+
+Kedua model diuji pada **517 artikel** yang sama. Snapshot berisi 1.295 artikel
+dari empat penerbit. Split temporal menggunakan 470 artikel latih, 308 artikel
+validasi, dan horizon uji satu hari.
+
+| Model | Macro-F1 | Peran |
+|---|---:|---|
+| Majority class | 0,026 | Baseline |
+| TF-IDF + LinearSVC | 0,420 | Model yang dipromosikan |
+
+Kualitas berbeda antar kelas. F1 `olahraga` mencapai 0,839, sementara `ekonomi`
+mencapai 0,144 dan `hukum-kriminal` mencapai 0,083 dengan satu artikel uji.
+Label mengikuti klasifikasi redaksi pada RSS. Hasil ini menggambarkan
+snapshot dan horizon tersebut.
+[Protokol dan analisis hasil](docs/evaluation.md)
+
+## Coba demo dari checkout bersih
+
+Jalankan perintah berikut dari root repositori dengan Python 3.12 dan [uv](https://docs.astral.sh/uv/).
+Di PowerShell, gunakan `curl.exe` untuk langkah unduh.
+
+```bash
+uv sync --locked
+curl -fL https://huggingface.co/datasets/aeroo11/kanal-berita/resolve/d5243435fafd704b3620a40981d0da430693cc86/articles.parquet -o kanal-snapshot.parquet
+uv run kanal train --dataset kanal-snapshot.parquet --registry data/registry-e2e/portfolio --report-dir data/evaluation/portfolio
+uv run kanal champion --registry data/registry-e2e/portfolio
+```
+
+Jalankan API memakai registry hasil pelatihan.
+
+```bash
+# macOS / Linux
+KANAL_REGISTRY=data/registry-e2e/portfolio uv run uvicorn kanal.serving.api:app
+```
+
+```powershell
+$env:KANAL_REGISTRY = 'data/registry-e2e/portfolio'
+uv run uvicorn kanal.serving.api:app
+```
+
+Buka [Swagger lokal](http://127.0.0.1:8000/docs) dan coba `POST /predict` dengan
+judul `Persib melaju ke final setelah menang lewat adu penalti`. Respons
+mengembalikan `olahraga` dengan probabilitas sekitar 0,293 dan menyertakan ID
+model. File `evaluation.json` berisi hasil kedua model, matriks kebingungan,
+dan keputusan promosi. File `split.json` mencatat anggota tiap split,
+distribusi kelas, dan hash split.
+
+Workflow [Build and optionally deploy the API](.github/workflows/deploy-space.yml)
+membangun model dari snapshot yang sama, mengunggah laporan sebagai artefak GitHub
+Actions, dan menguji API dalam container. Publikasi ke Hugging Face Spaces
+memerlukan pilihan `publish` dan secret `HF_TOKEN`.
+
+## Promosi dan rollback
+
+`kanal decisions` menampilkan alasan kandidat diterima atau ditahan.
+Setelah dua model dipromosikan ke registry yang sama, `kanal rollback`
+mengaktifkan kembali model sebelumnya. API membaca ulang alias dalam 60 detik
+saat memakai registry yang sama. Gunakan `--registry` untuk registry demo.
+Tes integrasi menunjukkan promosi, penolakan model yang identik, dan rollback.
+[Tes siklus model](tests/test_training.py)
 
 ---
 
-## Yang sudah jalan hari ini
+## Jalankan pipeline data
 
 Ingestion yang mem-*polling* 25 RSS feed dari tiga penerbit Indonesia tiap jam,
 warehouse DuckDB, dan model dbt beserta *data contract*-nya.
@@ -501,20 +566,10 @@ Kolom provenance (`canonical_url`, `source`, `channel`) **ikut** dipublikasikan
 walau model tidak boleh melihatnya — karena tanpa itu, orang lain tidak bisa
 **mereproduksi** pengukuran kebocorannya dan hanya bisa mempercayai klaim saya.
 
-## Belum dibangun
+## Pengembangan lanjutan
 
-Disebutkan di sini supaya cakupannya terbaca jelas, dan supaya README ini tidak
-bisa disalahartikan sebagai deskripsi sistem yang sudah jadi:
-
-*near-duplicate clustering* dengan MinHash · empat kandidat model ·
-*evaluation harness* · *promotion gate* · serving · *confidence cascade* ·
-deteksi drift · dashboard.
-
-Satu hal yang **diketahui belum beres**: CNN tidak menghasilkan apa pun saat
-ingestion berjalan dari runner GitHub, padahal normal dari mesin lokal. Siklus
-berikutnya akan melaporkan status HTTP-nya, dan itu yang menentukan responsnya.
-IP datacenter Amerika diblokir sementara IP residensial Indonesia tidak akan
-menjadi temuan nyata tentang pasokan datanya, bukan bug yang bisa ditambal.
+Perbandingan IndoBERT dan LLM, retraining terjadwal, *confidence cascade*,
+deteksi drift, dan dashboard berada di luar cakupan demo v1.
 
 ## Lisensi
 

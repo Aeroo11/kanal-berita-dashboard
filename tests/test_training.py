@@ -8,6 +8,7 @@ Both could reasonably go the other way, so both are pinned:
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -16,7 +17,10 @@ import pytest
 
 from kanal.data.splits import Article
 from kanal.features.text import Example
+from kanal.models.majority import MajorityClass
+from kanal.registry.artifact import save
 from kanal.registry.store import CHAMPION, AliasNotSet, Registry
+from kanal.serving.loader import ChampionLoader
 from kanal.training import run as training
 
 NOW = datetime(2026, 7, 31, 12, 0, tzinfo=UTC)
@@ -78,7 +82,7 @@ def corpus(
 @pytest.fixture
 def warehouse(monkeypatch: pytest.MonkeyPatch) -> None:
     """Stand in for the warehouse, so the job runs without DuckDB."""
-    monkeypatch.setattr(training, "_load_corpus", lambda: corpus())
+    monkeypatch.setattr(training, "_load_corpus", lambda dataset: corpus())
 
 
 class TestAUsableSplit:
@@ -117,13 +121,59 @@ class TestAUsableSplit:
     def test_every_candidate_is_reported_not_only_the_winner(
         self, warehouse: None, tmp_path: Path
     ) -> None:
-        result = training.train_and_promote(registry_root=tmp_path / "reg", resamples=200)
+        report_dir = tmp_path / "report"
+        result = training.train_and_promote(
+            registry_root=tmp_path / "reg",
+            report_dir=report_dir,
+            git_commit="test-commit",
+            resamples=200,
+        )
         names = {name for name, *_ in result.candidates}
-        assert "majority" in names, "the baseline anchors every other number"
-        assert "tfidf-linearsvc" in names
+        assert names == {"majority", "tfidf-linearsvc"}
+
+        evaluation = json.loads((report_dir / "evaluation.json").read_text(encoding="utf-8"))
+        manifest = json.loads((report_dir / "split.json").read_text(encoding="utf-8"))
+        assert evaluation["split_hash"] == manifest["hash"] == result.split_hash
+        assert evaluation["git_commit"] == "test-commit"
+        assert {candidate["name"] for candidate in evaluation["candidates"]} == names
+        assert evaluation["verdict"] == "PROMOTE"
+        assert evaluation["champion_after"] == result.champion_after
 
 
 class TestRefusingIsSuccess:
+    def test_a_random_split_is_for_evaluation_only(self, warehouse: None, tmp_path: Path) -> None:
+        root = tmp_path / "reg"
+        result = training.train_and_promote(
+            registry_root=root, use_random_split=True, resamples=200
+        )
+        assert result.verdict == "HOLD"
+        assert result.horizon_days is None
+        assert not root.exists()
+
+    def test_a_better_candidate_on_the_same_split_can_replace_and_restore_the_champion(
+        self, warehouse: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        initial = training.train_and_promote(registry_root=tmp_path / "initial", resamples=200)
+        baseline = MajorityClass()
+        baseline.fit(["berita ekonomi", "berita politik"], ["ekonomi", "politik"])
+        saved = save(baseline, tmp_path / "baseline", split_hash=initial.split_hash)
+        root = tmp_path / "reg"
+        registry = Registry(root)
+        registry.register(tmp_path / "baseline", saved.id)
+        registry.promote(saved.id)
+        old = (datetime.now(UTC) - timedelta(days=7)).isoformat()
+        monkeypatch.setattr(Registry, "alias_set_at", lambda self, alias: old)
+        loader = ChampionLoader(root, ttl_seconds=0)
+        assert loader.get().meta.id == saved.id
+
+        result = training.train_and_promote(registry_root=root, resamples=200)
+
+        assert result.verdict == "PROMOTE", result.reasons
+        assert result.champion_before == saved.id
+        assert loader.get().meta.id == result.champion_after
+        assert registry.rollback() == saved.id
+        assert loader.get().meta.id == saved.id
+
     def test_a_second_identical_run_is_refused_and_changes_nothing(
         self, warehouse: None, tmp_path: Path
     ) -> None:
@@ -168,7 +218,9 @@ class TestAnUnusableSplit:
         train anything. That must be a clear message, not a stack trace from
         somewhere inside sklearn.
         """
-        monkeypatch.setattr(training, "_load_corpus", lambda: corpus(train_rows=1, test_rows=1))
+        monkeypatch.setattr(
+            training, "_load_corpus", lambda dataset: corpus(train_rows=1, test_rows=1)
+        )
         result = training.train_and_promote(registry_root=tmp_path / "reg", resamples=100)
 
         assert result.verdict == "UNUSABLE"
@@ -179,7 +231,7 @@ class TestAnUnusableSplit:
     def test_an_empty_warehouse_says_what_to_run(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        def empty() -> Any:
+        def empty(dataset: Path | None) -> Any:
             raise RuntimeError(
                 "the warehouse holds no articles — run `kanal load` and `dbt build` first"
             )
@@ -195,7 +247,9 @@ class TestProvenanceIsCarried:
     ) -> None:
         # The "test is larger than train" finding must not be lost between the
         # split and whoever reads the training log.
-        monkeypatch.setattr(training, "_load_corpus", lambda: corpus(train_rows=1, test_rows=30))
+        monkeypatch.setattr(
+            training, "_load_corpus", lambda dataset: corpus(train_rows=1, test_rows=30)
+        )
         result = training.train_and_promote(registry_root=tmp_path / "reg", resamples=100)
         assert any("larger than train" in w for w in result.split_warnings)
         assert "larger than train" in result.summary()
@@ -203,7 +257,9 @@ class TestProvenanceIsCarried:
     def test_a_provisional_result_says_so(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        monkeypatch.setattr(training, "_load_corpus", lambda: corpus(train_rows=30, test_rows=2))
+        monkeypatch.setattr(
+            training, "_load_corpus", lambda dataset: corpus(train_rows=30, test_rows=2)
+        )
         result = training.train_and_promote(registry_root=tmp_path / "reg", resamples=100)
         assert result.is_provisional
         assert "PROVISIONAL" in result.summary()

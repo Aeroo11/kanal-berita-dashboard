@@ -198,10 +198,11 @@ class TestFreshnessContract:
                 SELECT source,
                        count(*) AS n,
                        count(*) FILTER (
-                           WHERE published_at < now() - INTERVAL 30 DAY
+                           WHERE published_at < CAST(? AS TIMESTAMP) - INTERVAL 30 DAY
                        ) AS stale
                 FROM raw_articles GROUP BY 1
-                """
+                """,
+                [FETCHED],
             ).fetchall()
 
         assert rows == [("antara", 2, 0)]

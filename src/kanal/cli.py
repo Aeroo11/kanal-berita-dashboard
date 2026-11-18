@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -119,6 +120,9 @@ def _cmd_train(args: argparse.Namespace) -> int:
 
     run = train_and_promote(
         registry_root=Path(args.registry),
+        dataset=args.dataset,
+        report_dir=args.report_dir,
+        git_commit=os.environ.get("GITHUB_SHA"),
         use_random_split=args.random_split,
         resamples=args.resamples,
     )
@@ -282,6 +286,10 @@ def main(argv: list[str] | None = None) -> int:
     train_cmd.add_argument(
         "--registry", type=Path, default=Path("data/registry"), help="registry root"
     )
+    train_cmd.add_argument(
+        "--dataset", type=Path, help="train from an exported articles Parquet file"
+    )
+    train_cmd.add_argument("--report-dir", type=Path, help="write evaluation.json and split.json")
     train_cmd.add_argument(
         "--random-split",
         action="store_true",

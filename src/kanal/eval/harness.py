@@ -127,6 +127,8 @@ class RunResult:
                     "micro_f1": c.report.micro_f1,
                     "accuracy": c.report.accuracy,
                     "classes_evaluated": c.report.classes_evaluated,
+                    "classes_absent": c.report.classes_absent,
+                    "confusion": c.report.confusion,
                     "per_class": {
                         s.label: {
                             "f1": s.f1,

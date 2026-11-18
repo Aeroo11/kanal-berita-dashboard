@@ -44,6 +44,8 @@ tmp*/
 # directly, and the promotion log is what records which one was chosen.
 /data/registry/
 /data/registry-e2e/
+/data/evaluation/
+/kanal-snapshot.parquet
 
 # Keep small fixtures used by tests
 !/tests/fixtures/

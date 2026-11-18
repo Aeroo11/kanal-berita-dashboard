@@ -10,9 +10,9 @@ FROM python:3.12-slim AS build
 # uv, so the image resolves from the same lockfile the tests ran against. A
 # `pip install` here would silently allow a different dependency tree in
 # production than in CI.
-COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.10.6 /uv /usr/local/bin/uv
 
-WORKDIR /build
+WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
 # Dependencies in their own layer, so a code change does not re-resolve them.
@@ -21,7 +21,7 @@ RUN uv sync --frozen --no-install-project --no-dev
 
 COPY src/ ./src/
 COPY README.md ./
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --no-editable
 
 
 FROM python:3.12-slim
@@ -37,8 +37,7 @@ ENV HOME=/home/kanal \
     KANAL_REGISTRY=/app/registry
 
 WORKDIR /app
-COPY --from=build --chown=kanal:kanal /build/.venv /app/.venv
-COPY --from=build --chown=kanal:kanal /build/src /app/src
+COPY --from=build --chown=kanal:kanal /app/.venv /app/.venv
 
 # The registry travels with the image. An alias move inside a running container
 # still takes effect without a restart — the loader re-reads it on a timer — but

@@ -280,25 +280,49 @@ against. Stating it here rather than choosing it later is the point.
 
 ## The candidates
 
-Four, not two. Two candidates is an A/B test; four is a comparison.
+The v1 benchmark fits a majority-class baseline and TF-IDF + LinearSVC.
+IndoBERT-lite and zero-shot LLM are planned comparisons.
 
-| candidate | why it is in the set |
+| Candidate | Role |
 |---|---|
-| **majority class** | Makes every other number credible. Without it, "0.84 macro-F1" is unanchored |
-| **TF-IDF + LinearSVC** | The honest baseline. If it lands within a few points of a transformer at 1/1000th the cost, that is the finding |
-| **IndoBERT-lite** | A real fine-tune, on CPU, to keep the cost story real |
-| **LLM zero-shot** | No training data at all, four orders of magnitude more expensive |
-
-All four implement one `Candidate` protocol, so the harness cannot accidentally
-treat them differently.
+| **Majority class** | Predicts the most frequent training class |
+| **TF-IDF + LinearSVC** | Learns from word and character features with validation-set calibration |
+| **IndoBERT-lite** | Planned CPU fine-tune |
+| **LLM zero-shot** | Planned comparison without task-specific training |
 
 ---
 
 ## Reproducibility
 
-Every evaluation run records: the manifest hash, the git commit, the candidate
-configuration, every metric above, the measured latency and cost, and the random
-seed. A result that cannot state its manifest hash is not a result.
+`kanal train --dataset <snapshot.parquet> --report-dir <directory>` writes
+`split.json` and `evaluation.json`. They capture the test membership and
+composition, split hash, snapshot SHA-256, seed, bootstrap resample count,
+candidate configurations, per-class metrics, confusion matrices, measured
+latency, estimated cost, and promotion decision. Runs on GitHub Actions record
+the checkout commit.
+[Reproduction commands](../README.md#coba-demo-dari-checkout-bersih)
+
+### v1 results
+
+Snapshot revision `d5243435fafd704b3620a40981d0da430693cc86` contains 1,295
+articles. Its 14/7-day split yields 163 training rows and 1,077 test rows, so
+the training command uses the 2/1-day fallback. At the one-day horizon,
+split `0c6d397f63aa` has 470 training, 308 validation, and 517 test articles.
+
+| Candidate | Macro-F1 | ECE |
+|---|---:|---:|
+| Majority class | 0.0256 | 0.1561 |
+| TF-IDF + LinearSVC | 0.4200 | 0.0683 |
+
+The registry promoted TF-IDF on this split. It correctly labelled 9 of 112
+`ekonomi` articles and 8 of 96 `politik` articles. The test set contains one
+`hukum-kriminal` article. TF-IDF identified it and assigned the same class to
+22 articles from other sections. These counts explain why macro-F1 and
+per-class support are reported together.
+
+In a title-only smoke test, “Bank Indonesia pertahankan suku bunga acuan” was
+classified as `teknologi` with probability 0.3602. This is an example of an
+error the API can make on a plausible headline.
 
 ---
 

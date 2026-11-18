@@ -1,94 +1,123 @@
-name: deploy space
-
-# Pushes the serving container to a Hugging Face Space.
-#
-# Manual rather than on-push. A deploy replaces the running API, and the alias
-# poll means most changes — including every rollback — do not need one. Tying
-# this to `main` would redeploy the service for a README edit.
+name: Build and optionally deploy the API
 
 on:
   workflow_dispatch:
     inputs:
+      publish:
+        description: Publish the verified API and model to Hugging Face Spaces
+        type: boolean
+        default: false
       space:
-        description: "Target Space (owner/name)"
-        required: false
-        default: "aeroo11/kanal"
+        description: Target Space (owner/name)
+        type: string
+        default: aeroo11/kanal
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-space-${{ inputs.space }}
+
+env:
+  DATASET_URL: https://huggingface.co/datasets/aeroo11/kanal-berita/resolve/d5243435fafd704b3620a40981d0da430693cc86/articles.parquet
+  DATASET_SHA256: e6e7af38cef3d97dee9d539a2f364dcd8b10a8cd39d94709d19c5fe54d138581
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
-      - name: Refuse to deploy without a promoted model
-        run: |
-          set -o pipefail
-          if [ ! -f data/registry/aliases/champion.json ]; then
-            echo "::error::No champion alias in data/registry — there is nothing to serve."
-            echo "Run the training and promotion job first."
-            exit 1
-          fi
-          echo "champion: $(cat data/registry/aliases/champion.json)"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Verify the image builds and answers
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.10.6"
+
+      - name: Train from the published snapshot
         run: |
-          set -o pipefail
+          mkdir -p data/export
+          curl --fail --location --retry 3 "$DATASET_URL" -o data/export/articles.parquet
+          printf '%s  data/export/articles.parquet\n' "$DATASET_SHA256" | sha256sum --check
+          uv sync --locked --no-dev
+          uv run --no-sync kanal train --dataset data/export/articles.parquet --report-dir data/evaluation
+          uv run --no-sync kanal champion
+
+      - name: Save the evaluation and split manifest
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: kanal-evaluation
+          path: data/evaluation/
+
+      - name: Build and smoke-test the serving image
+        run: |
           docker build -t kanal-api .
-          docker run -d --name kanal-test -p 7860:7860 kanal-api
-          # Poll rather than sleep: a fixed wait is either wasted time or a flake.
+          container=$(docker run --detach --publish 127.0.0.1:7860:7860 kanal-api)
+          trap 'docker logs "$container"; docker rm -f "$container"' EXIT
+          ready=false
           for i in $(seq 1 30); do
-            if curl -sf http://localhost:7860/health > /dev/null; then break; fi
+            if curl --silent --fail --max-time 2 http://127.0.0.1:7860/health -o /tmp/health.json; then
+              ready=true
+              break
+            fi
             sleep 2
           done
-          curl -sf http://localhost:7860/health | tee health.json
-          # A container that starts but has no model is a failed deploy, not a
-          # successful one — this is exactly the case /health exists to expose.
-          python -c "
-          import json, sys
-          h = json.load(open('health.json'))
-          if h['status'] == 'no_champion':
-              sys.exit('the container started but has no model to serve')
-          print(f\"serving {h['model_name']} ({h['model_id']})\")
-          "
-          curl -sf -X POST http://localhost:7860/predict \
+          test "$ready" = true
+          curl --fail --silent --show-error --max-time 10 http://127.0.0.1:7860/predict \
             -H 'content-type: application/json' \
-            -d '{"articles":[{"title":"Bank Indonesia pertahankan suku bunga acuan"}]}'
-          docker rm -f kanal-test
+            -d '{"articles":[{"title":"Persib melaju ke final setelah menang lewat adu penalti"}]}' \
+            -o /tmp/prediction.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
 
-      - name: Push to the Space
+          health = json.loads(Path("/tmp/health.json").read_text())
+          prediction = json.loads(Path("/tmp/prediction.json").read_text())
+          alias = json.loads(Path("data/registry/aliases/champion.json").read_text())
+          assert health["status"] == "ok"
+          assert prediction["model_id"] == health["model_id"] == alias["artifact_id"]
+          assert prediction["predictions"][0]["kanal"] in health["classes"]
+          print(json.dumps(prediction, indent=2))
+          PY
+
+      - name: Publish the verified build inputs to the Space
+        if: inputs.publish
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           SPACE: ${{ inputs.space }}
         run: |
-          set -o pipefail
-          if [ -z "$HF_TOKEN" ]; then
-            echo "::error::HF_TOKEN secret is not set."
+          if [[ -z "$HF_TOKEN" ]]; then
+            echo "::error::Set the HF_TOKEN secret before enabling publish."
             exit 1
           fi
-          pip install --quiet huggingface_hub
-          # README_SPACE.md carries the YAML front-matter Spaces needs; it is
-          # named differently in the repo so it does not shadow the real README.
-          cp README_SPACE.md /tmp/space-readme.md
-          python - <<'PY'
+          uv run --no-sync python - <<'PY'
           import os
+          import shutil
+          import subprocess
+          from pathlib import Path
+          from tempfile import TemporaryDirectory
+
           from huggingface_hub import HfApi
 
-          api = HfApi(token=os.environ["HF_TOKEN"])
           space = os.environ["SPACE"]
+          api = HfApi(token=os.environ["HF_TOKEN"])
           api.create_repo(space, repo_type="space", space_sdk="docker", exist_ok=True)
 
-          for local, remote in [
-              ("Dockerfile", "Dockerfile"),
-              ("/tmp/space-readme.md", "README.md"),
-              ("pyproject.toml", "pyproject.toml"),
-              ("uv.lock", "uv.lock"),
-          ]:
-              api.upload_file(path_or_fileobj=local, path_in_repo=remote,
-                              repo_id=space, repo_type="space")
-
-          for folder, remote in [("src", "src"), ("data/registry", "data/registry")]:
-              api.upload_folder(folder_path=folder, path_in_repo=remote,
-                                repo_id=space, repo_type="space")
-
-          print(f"https://huggingface.co/spaces/{space}")
+          with TemporaryDirectory() as directory:
+              target = Path(directory)
+              tracked = subprocess.check_output(["git", "ls-files", "src"], text=True)
+              for name in [".dockerignore", "Dockerfile", "pyproject.toml", "uv.lock", *tracked.splitlines()]:
+                  destination = target / name
+                  destination.parent.mkdir(parents=True, exist_ok=True)
+                  shutil.copyfile(name, destination)
+              shutil.copyfile("README_SPACE.md", target / "README.md")
+              shutil.copytree("data/registry", target / "data/registry", ignore=shutil.ignore_patterns("_staging"))
+              api.upload_folder(
+                  repo_id=space, repo_type="space", folder_path=target,
+                  commit_message=f"Serve KANAL from {os.environ['GITHUB_SHA'][:12]}",
+              )
           PY

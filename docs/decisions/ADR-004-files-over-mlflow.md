@@ -37,7 +37,7 @@ way the API is not already dead from.
 
 **Nothing here uses what MLflow is for.** Its value is in experiment comparison
 across many runs, parameter search, and artifact browsing across a team. This
-project fits four candidates on one split and records the comparison in a JSON
+project fits its candidates on one split and records the comparison in a JSON
 file the harness already writes. Adding a service to store three values buys a
 UI for data that is legible as text.
 
@@ -79,7 +79,7 @@ the storage layout would have to be reverse-engineered.
 
 ## Related
 
-- [ADR-002](ADR-002-plain-python-over-dlt.md) made the same trade for ingestion:
+- [ADR-002](ADR-002-plain-python-ingestion.md) made the same trade for ingestion:
   the logic being demonstrated is the logic worth writing.
 - The atomic alias write in `registry/store.py` was added after a concurrency
   test caught `write_text` truncating the file a serving process was reading.

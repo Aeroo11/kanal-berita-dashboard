@@ -14,6 +14,15 @@ __pycache__
 data/raw
 data/warehouse
 data/export
+data/evaluation
+data/*.duckdb
+data/*.duckdb.wal
+data/.duckdb-tmp
+data/state
+data/registry/_staging
+data/registry-e2e
+kanal-snapshot.parquet
+.dagster_home
 dbt/target
 dbt/logs
 

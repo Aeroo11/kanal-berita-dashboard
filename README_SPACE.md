@@ -11,23 +11,23 @@ license: mit
 
 # KANAL — Indonesian news section classifier
 
-Classifies an Indonesian news article into one of eight sections from the
-**headline and RSS summary alone** — never the article body, because none is
-collected.
+Classifies Indonesian news into one of eight sections from the headline and
+optional RSS summary. The demo serves a TF-IDF model with a linear SVM.
 
-- **Try it:** [`/docs`](./docs) — Swagger, clickable
-- **Dataset:** [`aeroo11/kanal-berita`](https://huggingface.co/datasets/aeroo11/kanal-berita)
-- **Source:** [github.com/Aeroo11/kanal-berita-dashboard](https://github.com/Aeroo11/kanal-berita-dashboard)
+Open `/docs` on the Space's app URL to try Swagger. The same API can be called
+with curl. Set `BASE_URL` to the app URL first.
 
 ```bash
-curl -X POST https://aeroo11-kanal.hf.space/predict \
+curl -X POST "$BASE_URL/predict" \
   -H 'content-type: application/json' \
-  -d '{"articles":[{"title":"Bank Indonesia pertahankan suku bunga acuan"}]}'
+  -d '{"articles":[{"title":"Persib melaju ke final setelah menang lewat adu penalti"}]}'
 ```
 
-Every response names the model that answered, its confidence, the measured
-latency, and what a thousand such calls cost. The champion is resolved from an
-alias on a 60-second timer, so a rollback takes effect without a redeploy.
+The response includes the category, its probability, the model ID, and
+latency. The serving process checks the model alias every 60 seconds.
+
+[Dataset on Hugging Face](https://huggingface.co/datasets/aeroo11/kanal-berita) ·
+[Source and local setup](https://github.com/Aeroo11/kanal-berita-dashboard)
 
 ## What is worth knowing before trusting it
 
@@ -46,6 +46,7 @@ and it records two findings that were withdrawn under control:
 
 See [`docs/evaluation.md`](https://github.com/Aeroo11/kanal-berita-dashboard/blob/main/docs/evaluation.md).
 
-Current scores are **provisional**: the corpus has only a few days of collection
-history, so the temporal split has too few training rows to mean much. It grows
-hourly.
+On the pinned 1,295-article snapshot, TF-IDF achieved 0.420 macro-F1 versus
+0.026 for the majority baseline on 517 test articles at a one-day horizon.
+F1 ranged from 0.083 for law and crime to 0.839 for sports. These scores
+describe the snapshot and split used for this demo.

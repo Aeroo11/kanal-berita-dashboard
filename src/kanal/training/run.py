@@ -21,8 +21,10 @@ most challengers should not pass it.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -36,13 +38,13 @@ from kanal.data.splits import (
     random_split,
     temporal_split,
 )
-from kanal.eval.harness import Dataset, build_dataset, compare, score_candidate
+from kanal.eval.harness import Dataset, RunResult, build_dataset, compare, score_candidate
 from kanal.features.text import Example
 from kanal.models.base import Candidate
 from kanal.models.majority import MajorityClass
 from kanal.models.tfidf import TfidfLinearSVC
 from kanal.registry.artifact import load, save
-from kanal.registry.promote import Incumbent, Verdict, evaluate_gate
+from kanal.registry.promote import GateResult, Incumbent, Verdict, evaluate_gate
 from kanal.registry.store import CHAMPION, AliasNotSet, Decision, Registry
 
 log = logging.getLogger(__name__)
@@ -80,7 +82,7 @@ class TrainingRun:
     # The prediction horizon, in days. Recorded because macro-F1 at one horizon
     # is not comparable with macro-F1 at another, and without this on the run a
     # later reader has no way to know.
-    horizon_days: float = 7.0
+    horizon_days: float | None = 7.0
     used_fallback_window: bool = False
     candidates: list[tuple[str, float, float, float]] = field(default_factory=list)
     decision: Decision | None = None
@@ -94,12 +96,13 @@ class TrainingRun:
         return self.verdict == str(Verdict.PROMOTE)
 
     def summary(self) -> str:
+        horizon = "random split" if self.horizon_days is None else f"horizon={self.horizon_days:g}d"
         lines = [
             f"split {self.split_hash[:12]}  "
             f"train={self.n_train} val={self.n_val} test={self.n_test}  "
-            f"horizon={self.horizon_days:g}d",
+            f"{horizon}",
         ]
-        if self.used_fallback_window:
+        if self.used_fallback_window and self.horizon_days is not None:
             lines.append(
                 f"  window narrowed to {self.horizon_days:g}d — the protocol's 14/7 "
                 f"assumed weeks of collection history. Scores at this horizon are "
@@ -124,19 +127,32 @@ class TrainingRun:
         return "\n".join(lines)
 
 
-def _load_corpus() -> tuple[list[Article], dict[str, Example], dict[str, str]]:
+def _load_corpus(
+    dataset: Path | None = None,
+) -> tuple[list[Article], dict[str, Example], dict[str, str]]:
+    import duckdb
+
     from kanal.warehouse.duck import reader
     from kanal.warehouse.loader import default_db_path
 
-    with reader(default_db_path()) as connection:
-        rows = connection.execute("""
-            SELECT article_key, title, coalesce(summary, ''), published_at, source, kanal
-            FROM fct_articles
-            WHERE published_at IS NOT NULL AND title IS NOT NULL AND title <> ''
-            ORDER BY published_at
-        """).fetchall()
+    query = """
+        SELECT article_key, title, coalesce(summary, ''), published_at, source, kanal
+        FROM fct_articles
+        WHERE published_at IS NOT NULL AND title IS NOT NULL AND title <> ''
+          AND source IS NOT NULL AND kanal IS NOT NULL
+        ORDER BY published_at, article_key
+    """
+    if dataset is None:
+        with reader(default_db_path()) as connection:
+            rows = connection.execute(query).fetchall()
+    else:
+        with duckdb.connect() as connection:
+            connection.read_parquet(str(dataset)).create_view("fct_articles")
+            rows = connection.execute(query).fetchall()
 
     if not rows:
+        if dataset is not None:
+            raise RuntimeError(f"the dataset has no usable articles: {dataset}")
         raise RuntimeError(
             "the warehouse holds no articles — run `kanal load` and `dbt build` first"
         )
@@ -157,73 +173,37 @@ def _load_corpus() -> tuple[list[Article], dict[str, Example], dict[str, str]]:
     return articles, examples, labels
 
 
-def _incumbent(registry: Registry, split_hash: str) -> Incumbent | None:
-    """The champion as the registry reports it.
-
-    Returns None when the champion was scored on a different split. That is not
-    a silent fallback to "no incumbent" — the gate's G1 would reject a
-    cross-split comparison anyway, and forcing this run to be treated as a first
-    promotion would hide the problem rather than surface it. The caller logs it.
-    """
-    try:
-        current = registry.resolve(CHAMPION)
-    except AliasNotSet:
-        return None
-
-    try:
-        artifact = load(registry.artifacts / current)
-    except Exception as err:  # the champion may predate a feature-code change
-        log.warning("cannot read the current champion (%s); treating as no incumbent", err)
-        return None
-
-    if artifact.meta.split_hash != split_hash:
-        log.warning(
-            "champion %s was scored on split %s, this run uses %s — its recorded "
-            "metrics are not comparable, so it is re-scored below",
-            current,
-            artifact.meta.split_hash[:12],
-            split_hash[:12],
-        )
-        return None
-
-    return Incumbent(
-        name=artifact.meta.name,
-        split_hash=artifact.meta.split_hash,
-        macro_f1=float(artifact.meta.metrics.get("macro_f1", 0.0)),
-        per_class_f1={
-            k.removeprefix("f1_"): v
-            for k, v in artifact.meta.metrics.items()
-            if k.startswith("f1_")
-        },
-        usd_per_1000=float(artifact.meta.metrics.get("usd_per_1000", 0.0)),
-        promoted_at=None,
-    )
-
-
-def _fit(train: Dataset, val: Dataset) -> list[Candidate]:
+def _fit(train: Dataset, val: Dataset, seed: int) -> tuple[Candidate, Candidate]:
     """The candidate set. Order matters only for reporting."""
     baseline = MajorityClass()
     baseline.fit(train.texts, train.labels)
 
-    model = TfidfLinearSVC(min_df=1)
+    model = TfidfLinearSVC(min_df=1, seed=seed)
     model.fit(
         train.texts,
         train.labels,
         val_texts=val.texts or None,
         val_labels=val.labels or None,
     )
-    return [baseline, model]
+    return baseline, model
 
 
 def train_and_promote(
     *,
     registry_root: Path = DEFAULT_REGISTRY,
+    dataset: Path | None = None,
+    report_dir: Path | None = None,
+    git_commit: str | None = None,
     use_random_split: bool = False,
     resamples: int = 10_000,
     seed: int = 42,
 ) -> TrainingRun:
     """Build a split, fit the candidates, run the gate, and act on the verdict."""
-    articles, examples, labels = _load_corpus()
+    dataset_sha256 = None
+    if report_dir is not None and dataset is not None:
+        with dataset.open("rb") as source:
+            dataset_sha256 = hashlib.file_digest(source, "sha256").hexdigest()
+    articles, examples, labels = _load_corpus(dataset)
     taxonomy = sorted(set(labels.values()))
 
     def build(
@@ -241,7 +221,7 @@ def train_and_promote(
     def unusable(tr: Dataset, te: Dataset) -> bool:
         return len(tr) < 20 or tr.n_classes < 2 or len(te) < 20
 
-    horizon = float(VAL_CUTOFF_DAYS)
+    horizon = None if use_random_split else float(VAL_CUTOFF_DAYS)
     fell_back = False
 
     if use_random_split:
@@ -282,97 +262,117 @@ def train_and_promote(
         used_fallback_window=fell_back,
     )
 
+    evaluation = RunResult(
+        split_hash=manifest.hash,
+        split_anchor=manifest.anchor,
+        n_train=len(train),
+        n_val=len(val),
+        n_test=len(test),
+        is_provisional=manifest.is_provisional,
+        warnings=manifest.warnings,
+    )
+
+    def finish() -> TrainingRun:
+        if report_dir is not None:
+            manifest.write(report_dir / "split.json")
+            payload = evaluation.to_dict() | {
+                "dataset_sha256": dataset_sha256,
+                "git_commit": git_commit,
+                "seed": seed,
+                "resamples": resamples,
+                "horizon_days": run.horizon_days,
+                "used_fallback_window": run.used_fallback_window,
+                "verdict": run.verdict,
+                "reasons": run.reasons,
+                "decision": asdict(run.decision) if run.decision else None,
+                "champion_after": run.champion_after,
+            }
+            (report_dir / "evaluation.json").write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+            )
+        return run
+
     if unusable(train, test):
         run.verdict = "UNUSABLE"
         run.reasons = [
             f"the split is not usable for training: train={len(train)} rows across "
             f"{train.n_classes} class(es), test={len(test)} rows"
         ]
-        return run
+        return finish()
 
-    candidates = _fit(train, val)
-    scored: list[tuple[Candidate, object, list[str]]] = []
-    for candidate in candidates:
-        result, predictions = score_candidate(candidate, test, taxonomy=taxonomy)
-        scored.append((candidate, result, predictions))
-        run.candidates.append(
-            (
-                candidate.name,
-                result.report.macro_f1,
-                result.ece,
-                result.usd_per_1000,
-            )
-        )
-
-    # The challenger is the best of this run's candidates by macro-F1; the
-    # incumbent is whatever is actually serving.
-    challenger, challenger_result, challenger_pred = max(
-        scored,
-        key=lambda s: s[1].report.macro_f1,  # type: ignore[attr-defined]
+    baseline, challenger = _fit(train, val, seed)
+    baseline_result, baseline_pred = score_candidate(baseline, test, taxonomy=taxonomy)
+    challenger_result, challenger_pred = score_candidate(challenger, test, taxonomy=taxonomy)
+    evaluation.candidates.extend((baseline_result, challenger_result))
+    run.candidates.extend(
+        (result.name, result.report.macro_f1, result.ece, result.usd_per_1000)
+        for result in evaluation.candidates
     )
-    registry = Registry(registry_root)
-    try:
-        run.champion_before = registry.resolve(CHAMPION)
-    except AliasNotSet:
-        run.champion_before = None
-
-    incumbent = _incumbent(registry, manifest.hash)
-    if incumbent is None and run.champion_before is not None:
-        # There is a champion, but its score is not comparable. Re-score it here
-        # rather than pretending this is a first promotion.
-        try:
-            serving = load(registry.artifacts / run.champion_before)
-            serving_result, serving_pred = score_candidate(serving.model, test, taxonomy=taxonomy)
-            incumbent = Incumbent(
-                name=serving.meta.name,
-                split_hash=manifest.hash,
-                macro_f1=serving_result.report.macro_f1,
-                per_class_f1={s.label: s.f1 for s in serving_result.report.per_class},
-                usd_per_1000=serving_result.usd_per_1000,
-            )
-            baseline_pred = serving_pred
-        except Exception as err:
-            log.warning("could not re-score the champion (%s)", err)
-            baseline_pred = None
-    else:
-        baseline_pred = None
-
-    # Fall back to this run's baseline when there is nothing serving, so the
-    # comparison is always against something rather than skipped.
-    if incumbent is None:
-        base_candidate, base_result, base_pred = scored[0]
-        if base_candidate is not challenger:
-            incumbent = Incumbent(
-                name=base_candidate.name,
-                split_hash=manifest.hash,
-                macro_f1=base_result.report.macro_f1,  # type: ignore[attr-defined]
-                per_class_f1={
-                    s.label: s.f1
-                    for s in base_result.report.per_class  # type: ignore[attr-defined]
-                },
-                usd_per_1000=base_result.usd_per_1000,  # type: ignore[attr-defined]
-            )
-            baseline_pred = base_pred
-
     comparison = compare(
         test,
-        incumbent.name if incumbent else "none",
-        baseline_pred or challenger_pred,
+        baseline.name,
+        baseline_pred,
         challenger.name,
         challenger_pred,
         taxonomy=taxonomy,
         resamples=resamples,
         seed=seed,
     )
+    evaluation.comparisons.append(comparison)
 
-    gate = evaluate_gate(
-        challenger_result,  # type: ignore[arg-type]
-        comparison,
-        incumbent,
-        split_hash=manifest.hash,
-        n_test=len(test),
-        cluster_leak=False,  # asserted above; a leak would have raised
-    )
+    registry = Registry(registry_root)
+    try:
+        run.champion_before = registry.resolve(CHAMPION)
+    except AliasNotSet:
+        run.champion_before = None
+    run.champion_after = run.champion_before
+
+    if use_random_split:
+        run.verdict = str(Verdict.HOLD)
+        run.reasons = ["Random splits are for diagnostics. Promotion requires a temporal split."]
+        return finish()
+
+    reference_result = baseline_result
+    promoted_at = None
+    gate = None
+    if run.champion_before is not None:
+        try:
+            serving = load(registry.artifacts / run.champion_before)
+            reference_result, serving_pred = score_candidate(serving.model, test, taxonomy=taxonomy)
+            set_at = registry.alias_set_at(CHAMPION)
+            promoted_at = datetime.fromisoformat(set_at) if set_at else None
+        except Exception as err:
+            gate = GateResult(
+                verdict=Verdict.HOLD,
+                reasons=[
+                    f"G1 provenance: could not evaluate champion {run.champion_before}: {err}"
+                ],
+            )
+        else:
+            comparison = compare(
+                test,
+                reference_result.name,
+                serving_pred,
+                challenger.name,
+                challenger_pred,
+                taxonomy=taxonomy,
+                resamples=resamples,
+                seed=seed,
+            )
+            evaluation.comparisons.append(comparison)
+
+    if gate is None:
+        incumbent = Incumbent(
+            name=reference_result.name,
+            split_hash=manifest.hash,
+            macro_f1=reference_result.report.macro_f1,
+            per_class_f1={s.label: s.f1 for s in reference_result.report.per_class},
+            usd_per_1000=reference_result.usd_per_1000,
+            promoted_at=promoted_at,
+        )
+        gate = evaluate_gate(
+            challenger_result, comparison, incumbent, split_hash=manifest.hash, n_test=len(test)
+        )
     run.verdict = str(gate.verdict)
     run.reasons = list(gate.reasons)
 
@@ -382,30 +382,23 @@ def train_and_promote(
         staging,
         split_hash=manifest.hash,
         metrics={
-            "macro_f1": challenger_result.report.macro_f1,  # type: ignore[attr-defined]
-            "accuracy": challenger_result.report.accuracy,  # type: ignore[attr-defined]
-            "ece": challenger_result.ece,  # type: ignore[attr-defined]
-            "p95_ms": challenger_result.p95_ms,  # type: ignore[attr-defined]
-            "usd_per_1000": challenger_result.usd_per_1000,  # type: ignore[attr-defined]
-            **{
-                f"f1_{s.label}": s.f1
-                for s in challenger_result.report.per_class  # type: ignore[attr-defined]
-            },
+            "macro_f1": challenger_result.report.macro_f1,
+            "accuracy": challenger_result.report.accuracy,
+            "ece": challenger_result.ece,
+            "p95_ms": challenger_result.p95_ms,
+            "usd_per_1000": challenger_result.usd_per_1000,
+            **{f"f1_{s.label}": s.f1 for s in challenger_result.report.per_class},
         },
-        notes=f"trained {datetime.now(tz=UTC).isoformat()}",
+        git_commit=git_commit,
     )
-
     run.decision = registry.apply(
         gate,
         artifact_dir=staging,
         artifact_id=meta.id,
         artifact_name=challenger.name,
         split_hash=manifest.hash,
-        macro_f1=challenger_result.report.macro_f1,  # type: ignore[attr-defined]
+        macro_f1=challenger_result.report.macro_f1,
     )
-
-    try:
-        run.champion_after = registry.resolve(CHAMPION)
-    except AliasNotSet:
-        run.champion_after = None
-    return run
+    if run.promoted:
+        run.champion_after = meta.id
+    return finish()
