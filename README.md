@@ -4,6 +4,8 @@ KANAL mengklasifikasikan judul dan ringkasan berita Indonesia ke delapan kanal.
 Proyek ini menunjukkan cara membandingkan model pada berita yang lebih baru,
 mencatat keputusan promosi, dan memulihkan versi sebelumnya.
 
+[Studi kasus portofolio dan demo Docker](docs/portfolio.md)
+
 **Dataset publik** [`aeroo11/kanal-berita`](https://huggingface.co/datasets/aeroo11/kanal-berita)
 
 ```mermaid
