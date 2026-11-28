@@ -1,0 +1,56 @@
+polling 27 feed(s)…
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/politik.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hukum.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/ekonomi.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/metro.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/sepakbola.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/tekno.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:tekno: landed 1 new (19 dup) → antara-tekno-015232.jsonl
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/hiburan.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/dunia.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/humaniora.xml "HTTP/1.1 200 OK"
+INFO    httpx                        HTTP Request: GET https://www.antaranews.com/rss/lifestyle.xml "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            antara:lifestyle: landed 7 new (13 dup) → antara-lifestyle-015237.jsonl
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/nasional/rss "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            cnn:nasional: landed 14 new (86 dup) → cnn-nasional-015238.jsonl
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/ekonomi/rss "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            cnn:ekonomi: landed 8 new (92 dup) → cnn-ekonomi-015239.jsonl
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/olahraga/rss "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            cnn:olahraga: landed 14 new (86 dup) → cnn-olahraga-015241.jsonl
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/teknologi/rss "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            cnn:teknologi: landed 21 new (79 dup) → cnn-teknologi-015242.jsonl
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/hiburan/rss "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            cnn:hiburan: landed 17 new (83 dup) → cnn-hiburan-015243.jsonl
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/internasional/rss "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            cnn:internasional: landed 5 new (95 dup) → cnn-internasional-015245.jsonl
+INFO    httpx                        HTTP Request: GET https://www.cnnindonesia.com/gaya-hidup/rss "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            cnn:gaya-hidup: landed 23 new (77 dup) → cnn-gaya-hidup-015246.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bisnis "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:bisnis: landed 8 new (42 dup) → liputan6-bisnis-015247.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/bola "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:bola: landed 10 new (40 dup) → liputan6-bola-015249.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/tekno "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:tekno: landed 8 new (42 dup) → liputan6-tekno-015250.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/showbiz "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:showbiz: landed 8 new (42 dup) → liputan6-showbiz-015251.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/global "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:global: landed 2 new (48 dup) → liputan6-global-015253.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/health "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:health: landed 1 new (49 dup) → liputan6-health-015254.jsonl
+INFO    httpx                        HTTP Request: GET https://feed.liputan6.com/rss/lifestyle "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            liputan6:lifestyle: landed 3 new (47 dup) → liputan6-lifestyle-015255.jsonl
+INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/nasional "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            republika:nasional: landed 12 new (3 dup) → republika-nasional-015257.jsonl
+INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/ekonomi "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            republika:ekonomi: landed 6 new (9 dup) → republika-ekonomi-015258.jsonl
+INFO    httpx                        HTTP Request: GET https://republika.co.id/rss/internasional "HTTP/1.1 200 OK"
+INFO    kanal.ingest.land            republika:internasional: landed 5 new (10 dup) → republika-internasional-015259.jsonl
+cycle 2026-11-28 01:52:25 UTC (34.6s)
+  landed 173 new, 1122 already seen
+  feeds: ok=27
+  per source:
+      antara     10/10 feeds ok, 8 landed
+      cnn        7/7 feeds ok, 102 landed  (declared unreachable here)
+      liputan6   7/7 feeds ok, 40 landed
+      republika  3/3 feeds ok, 23 landed
+  ~~ cnn answered despite being declared unreachable — the declaration is stale and can be removed
